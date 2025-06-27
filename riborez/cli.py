@@ -6,6 +6,7 @@ RiboRez Command Line Interface
 import argparse
 import sys
 from .download_taxa import download_taxa
+from .gene_extract import extract_genes
 
 def main():
     """Main entry point for the riborez command."""
@@ -18,6 +19,8 @@ Examples:
   riborez download-taxa --taxon-name Pseudomonas --taxon-id 286
   riborez download-taxa --taxon-name Ecoli --taxon-id 562 --output-dir my_data --force
   riborez download-taxa --taxon-name Salmonella --taxon-id 590 --dry-run
+  riborez gene-extract --taxon-name Pseudomonas
+  riborez gene-extract --taxon-name Acinetobacter --sample-size 200
         """
     )
     
@@ -73,6 +76,38 @@ Examples:
         help="Print commands without executing"
     )
     
+    # Gene-extract subcommand
+    gene_extract_parser = subparsers.add_parser(
+        "gene-extract",
+        help="Extract genes from downloaded NCBI datasets",
+        description="Extract all genes (CDS and rRNA) from downloaded genome datasets"
+    )
+    
+    gene_extract_parser.add_argument(
+        "--taxon-name", 
+        required=True, 
+        help="Taxon name (used to locate downloaded data directory)"
+    )
+    gene_extract_parser.add_argument(
+        "--data-root", 
+        help="Path to data directory (auto-detected if not provided)"
+    )
+    gene_extract_parser.add_argument(
+        "--output-dir", 
+        help="Output directory for extracted genes (auto-generated if not provided)"
+    )
+    gene_extract_parser.add_argument(
+        "--sample-size", 
+        type=int, 
+        help="Number of genomes to sample (default: all available)"
+    )
+    gene_extract_parser.add_argument(
+        "--random-seed", 
+        type=int, 
+        default=42, 
+        help="Random seed for sampling (default: 42)"
+    )
+    
     # Parse arguments
     args = parser.parse_args()
     
@@ -91,6 +126,14 @@ Examples:
                 rehydrate=args.rehydrate,
                 force=args.force,
                 dry_run=args.dry_run
+            )
+        elif args.command == "gene-extract":
+            extract_genes(
+                taxon_name=args.taxon_name,
+                data_root=args.data_root,
+                output_dir=args.output_dir,
+                sample_size=args.sample_size,
+                random_seed=args.random_seed
             )
         else:
             print(f"Unknown command: {args.command}")

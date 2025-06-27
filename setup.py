@@ -27,7 +27,7 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=[
-        # No external dependencies needed - NCBI Datasets CLI is installed automatically
+        "biopython>=1.79",
     ],
     entry_points={
         "console_scripts": [

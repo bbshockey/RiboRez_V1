@@ -2,7 +2,11 @@
 
 A tool for ribosomal analysis and data management.
 
-## Prerequisites
+### Prerequisites
+```bash
+# prerequisites
+conda create -n env_name python=3.8
+```
 
 This tool requires the NCBI Datasets command-line tool to be installed. You can install it using any of these methods:
 
@@ -84,8 +88,30 @@ riborez download-taxa --taxon-name Bacillus --taxon-id 1386 --dry-run
 riborez download-taxa --taxon-name Staphylococcus --taxon-id 1279 --no-rehydrate
 ```
 
+### Extract Genes
+
+Extract all genes (CDS and rRNA) from downloaded datasets:
+
+```bash
+# Extract all genes from all genomes
+riborez gene-extract --taxon-name Pseudomonas
+
+# Extract genes from a sample of 200 genomes
+riborez gene-extract --taxon-name Acinetobacter --sample-size 200
+
+# Custom output directory
+riborez gene-extract --taxon-name Ecoli --output-dir my_extracted_genes
+
+# Custom data root path
+riborez gene-extract --taxon-name Salmonella --data-root /path/to/data
+
+# Custom random seed for sampling
+riborez gene-extract --taxon-name Bacillus --sample-size 100 --random-seed 123
+```
+
 ### Command Options
 
+#### download-taxa
 - `--taxon-name`: Taxon name (used for output folder name) [required]
 - `--taxon-id`: NCBI Taxon ID [required]
 - `--output-dir`: Optional custom output directory
@@ -93,6 +119,13 @@ riborez download-taxa --taxon-name Staphylococcus --taxon-id 1279 --no-rehydrate
 - `--no-rehydrate`: Skip rehydration
 - `--force`: Overwrite output directory if it exists
 - `--dry-run`: Print commands without executing
+
+#### gene-extract
+- `--taxon-name`: Taxon name (used to locate downloaded data directory) [required]
+- `--data-root`: Path to data directory (auto-detected if not provided)
+- `--output-dir`: Output directory for extracted genes (auto-generated if not provided)
+- `--sample-size`: Number of genomes to sample (default: all available)
+- `--random-seed`: Random seed for sampling (default: 42)
 
 ## Development
 
