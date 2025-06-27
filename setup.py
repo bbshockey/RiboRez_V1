@@ -27,9 +27,7 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=[
-        # Add your dependencies here
-        # "pandas>=1.3.0",
-        # "numpy>=1.21.0",
+        "ncbi-datasets-cli>=15.0.0",
     ],
     entry_points={
         "console_scripts": [
