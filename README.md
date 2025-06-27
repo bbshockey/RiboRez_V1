@@ -82,6 +82,9 @@ riborez download-taxa --taxon-name Bacillus --taxon-id 1386 --dry-run
 
 # Skip rehydration
 riborez download-taxa --taxon-name Staphylococcus --taxon-id 1279 --no-rehydrate
+
+# Limit number of genomes downloaded
+riborez download-taxa --taxon-name Pseudomonas --taxon-id 286 --max-genomes 10
 ```
 
 ### Command Options
@@ -89,6 +92,7 @@ riborez download-taxa --taxon-name Staphylococcus --taxon-id 1279 --no-rehydrate
 - `--taxon-name`: Taxon name (used for output folder name) [required]
 - `--taxon-id`: NCBI Taxon ID [required]
 - `--output-dir`: Optional custom output directory
+- `--max-genomes`: Maximum number of genomes to download (default: all available)
 - `--rehydrate`: Rehydrate datasets (default)
 - `--no-rehydrate`: Skip rehydration
 - `--force`: Overwrite output directory if it exists

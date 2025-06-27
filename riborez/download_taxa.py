@@ -19,7 +19,7 @@ def run_command(cmd_list, dry_run):
     if not dry_run:
         subprocess.run(cmd_list, check=True)
 
-def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run):
+def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, max_genomes=None):
     """
     Download and unpack NCBI genomes for a taxon.
     
@@ -30,6 +30,7 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run):
         rehydrate (bool): Whether to rehydrate datasets
         force (bool): Overwrite output directory if it exists
         dry_run (bool): Print commands without executing
+        max_genomes (int): Maximum number of genomes to download (optional)
     """
     # Check if datasets command is available and install if needed
     if not check_datasets_available():
@@ -69,6 +70,12 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run):
         "--include", "genome,gff3",
         "--filename", str(zip_path)
     ]
+    
+    # Add max-genomes limit if specified
+    if max_genomes is not None:
+        download_cmd.extend(["--max-genomes", str(max_genomes)])
+        print(f"[INFO] Limiting download to {max_genomes} genomes")
+    
     run_command(download_cmd, dry_run)
 
     # Step 2: Unzip
