@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from .install_dependencies import ensure_dependencies
 
 def check_datasets_available():
     """Check if the datasets command is available."""
@@ -30,14 +31,17 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run):
         force (bool): Overwrite output directory if it exists
         dry_run (bool): Print commands without executing
     """
-    # Check if datasets command is available
+    # Check if datasets command is available and install if needed
     if not check_datasets_available():
-        print("[ERROR] NCBI Datasets CLI is not installed or not in PATH")
-        print("[INFO] Please install it using one of these methods:")
-        print("  1. Run: python install_ncbi_datasets.py")
-        print("  2. Install via conda: conda install -c conda-forge ncbi-datasets-cli")
-        print("  3. Download manually from: https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/")
-        sys.exit(1)
+        print("[INFO] NCBI Datasets CLI not found. Attempting automatic installation...")
+        if not ensure_dependencies():
+            print("[ERROR] Failed to install NCBI Datasets CLI automatically")
+            print("[INFO] Please install it manually using one of these methods:")
+            print("  1. Run: python install_ncbi_datasets.py")
+            print("  2. Install via conda: conda install -c conda-forge ncbi-datasets-cli")
+            print("  3. Download manually from: https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/")
+            sys.exit(1)
+        print("[SUCCESS] NCBI Datasets CLI installed successfully!")
     
     if not output_dir:
         output_dir = f"{taxon_name}_NCBI"
