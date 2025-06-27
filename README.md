@@ -2,6 +2,49 @@
 
 A tool for ribosomal analysis and data management.
 
+## Prerequisites
+
+This tool requires the NCBI Datasets command-line tool to be installed. You can install it using any of these methods:
+
+### Automatic Installation (Recommended)
+```bash
+# Run the automatic installation script
+python install_ncbi_datasets.py
+```
+
+### Manual Installation Options
+
+#### Option 1: Using pip
+```bash
+pip install ncbi-datasets-cli
+```
+
+#### Option 2: Using conda
+```bash
+conda install -c conda-forge ncbi-datasets-cli
+```
+
+#### Option 3: Direct download
+**Linux:**
+```bash
+curl -o datasets 'https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-amd64/datasets'
+curl -o dataformat 'https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-amd64/dataformat'
+chmod +x datasets dataformat
+```
+
+**macOS:**
+```bash
+curl -o datasets 'https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/mac/datasets'
+curl -o dataformat 'https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/mac/dataformat'
+chmod +x datasets dataformat
+```
+
+**Windows:**
+```bash
+curl -o datasets.exe "https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/win64/datasets.exe"
+curl -o dataformat.exe "https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/win64/dataformat.exe"
+```
+
 ## Installation
 
 ### From Source
@@ -15,6 +58,8 @@ pip install -e .
 ```bash
 pip install git+https://github.com/bbshockey/RiboRez_V1.git
 ```
+
+**Note:** Make sure to install the NCBI Datasets CLI first (see Prerequisites above).
 
 ## Usage
 
@@ -48,15 +93,6 @@ riborez download-taxa --taxon-name Staphylococcus --taxon-id 1279 --no-rehydrate
 - `--no-rehydrate`: Skip rehydration
 - `--force`: Overwrite output directory if it exists
 - `--dry-run`: Print commands without executing
-
-## Prerequisites
-
-This tool requires the NCBI Datasets command-line tool to be installed:
-
-```bash
-# Install NCBI Datasets
-pip install ncbi-datasets-cli
-```
 
 ## Development
 

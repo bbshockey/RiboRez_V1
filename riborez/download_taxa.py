@@ -1,7 +1,17 @@
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+def check_datasets_available():
+    """Check if the datasets command is available."""
+    try:
+        result = subprocess.run(['datasets', '--version'], 
+                              capture_output=True, text=True)
+        return result.returncode == 0
+    except FileNotFoundError:
+        return False
 
 def run_command(cmd_list, dry_run):
     print("[CMD]", ' '.join(cmd_list))
@@ -20,6 +30,15 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run):
         force (bool): Overwrite output directory if it exists
         dry_run (bool): Print commands without executing
     """
+    # Check if datasets command is available
+    if not check_datasets_available():
+        print("[ERROR] NCBI Datasets CLI is not installed or not in PATH")
+        print("[INFO] Please install it using one of these methods:")
+        print("  1. Run: python install_ncbi_datasets.py")
+        print("  2. Install via conda: conda install -c conda-forge ncbi-datasets-cli")
+        print("  3. Download manually from: https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/")
+        sys.exit(1)
+    
     if not output_dir:
         output_dir = f"{taxon_name}_NCBI"
 

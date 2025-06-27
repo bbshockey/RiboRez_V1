@@ -1,5 +1,6 @@
 # Core dependencies
-# Add your specific dependencies here as needed
+# Note: ncbi-datasets-cli needs to be installed separately via:
+# pip install ncbi-datasets-cli
 
 # For development (optional)
 # pytest>=6.0.0

@@ -27,7 +27,7 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=[
-        "ncbi-datasets-cli>=15.0.0",
+        # ncbi-datasets-cli needs to be installed separately
     ],
     entry_points={
         "console_scripts": [
