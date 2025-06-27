@@ -8,6 +8,7 @@ import sys
 import subprocess
 import platform
 import urllib.request
+import shutil
 from pathlib import Path
 
 def check_datasets_installed():
@@ -19,12 +20,31 @@ def check_datasets_installed():
     except FileNotFoundError:
         return False
 
-def install_ncbi_datasets():
-    """Install NCBI Datasets CLI binary."""
-    if check_datasets_installed():
-        return True
+def install_via_conda():
+    """Try installing via conda."""
+    # Check if conda is available
+    if not shutil.which('conda'):
+        print("[INFO] Conda not found, skipping conda installation")
+        return False
     
-    print("Installing NCBI Datasets CLI...")
+    print("[INFO] Attempting conda installation...")
+    try:
+        result = subprocess.run(
+            ["conda", "install", "-c", "conda-forge", "ncbi-datasets-cli", "-y"],
+            capture_output=True, text=True, check=True
+        )
+        print("[SUCCESS] Conda installation completed")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[FAILED] Conda installation failed: {e.stderr}")
+        return False
+    except Exception as e:
+        print(f"[ERROR] Conda installation error: {e}")
+        return False
+
+def install_via_download():
+    """Install NCBI Datasets CLI binary via direct download."""
+    print("[INFO] Attempting direct download installation...")
     
     system = platform.system().lower()
     machine = platform.machine().lower()
@@ -46,7 +66,7 @@ def install_ncbi_datasets():
         datasets_name = "datasets.exe"
         dataformat_name = "dataformat.exe"
     else:
-        print(f"Unsupported platform: {system} {machine}")
+        print(f"[WARNING] Unsupported platform: {system} {machine}")
         return False
     
     # Create bin directory in user's home
@@ -58,9 +78,9 @@ def install_ncbi_datasets():
         datasets_path = bin_dir / datasets_name
         urllib.request.urlretrieve(datasets_url, datasets_path)
         datasets_path.chmod(0o755)  # Make executable
-        print(f"Downloaded datasets to {datasets_path}")
+        print(f"[SUCCESS] Downloaded datasets to {datasets_path}")
     except Exception as e:
-        print(f"Failed to download datasets: {e}")
+        print(f"[ERROR] Failed to download datasets: {e}")
         return False
     
     # Download dataformat
@@ -68,21 +88,44 @@ def install_ncbi_datasets():
         dataformat_path = bin_dir / dataformat_name
         urllib.request.urlretrieve(dataformat_url, dataformat_path)
         dataformat_path.chmod(0o755)  # Make executable
-        print(f"Downloaded dataformat to {dataformat_path}")
+        print(f"[SUCCESS] Downloaded dataformat to {dataformat_path}")
     except Exception as e:
-        print(f"Failed to download dataformat: {e}")
+        print(f"[ERROR] Failed to download dataformat: {e}")
         return False
     
     # Add to PATH if not already there
     path_env = os.environ.get('PATH', '')
     if str(bin_dir) not in path_env:
-        print(f"Please add the following to your shell profile (.bashrc, .zshrc, etc.):")
+        print(f"[INFO] Please add the following to your shell profile (.bashrc, .zshrc, etc.):")
         print(f"export PATH=\"$HOME/.local/bin:$PATH\"")
         # Also add to current session
         os.environ['PATH'] = f"{bin_dir}:{path_env}"
     
-    print("NCBI Datasets CLI installation completed!")
+    print("[SUCCESS] Direct download installation completed!")
     return True
+
+def install_ncbi_datasets():
+    """Install NCBI Datasets CLI using multiple methods."""
+    if check_datasets_installed():
+        return True
+    
+    print("[INFO] NCBI Datasets CLI not found. Attempting installation...")
+    
+    # Try conda first (more reliable)
+    if install_via_conda():
+        if check_datasets_installed():
+            return True
+        else:
+            print("[WARNING] Conda installation completed but datasets command not found in PATH")
+    
+    # Fall back to direct download
+    if install_via_download():
+        if check_datasets_installed():
+            return True
+        else:
+            print("[WARNING] Direct download completed but datasets command not found in PATH")
+    
+    return False
 
 def ensure_dependencies():
     """Ensure all dependencies are installed."""
