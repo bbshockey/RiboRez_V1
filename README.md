@@ -90,11 +90,20 @@ riborez download-taxa --taxon-name Staphylococcus --taxon-id 1279 --no-rehydrate
 
 ### Extract Genes
 
-Extract all genes (CDS and rRNA) from downloaded datasets:
+Extract genes from downloaded datasets:
 
 ```bash
 # Extract all genes from all genomes
 riborez gene-extract --taxon-name Pseudomonas
+
+# Extract specific rRNA genes
+riborez gene-extract --taxon-name Pseudomonas --genes 16S 23S
+
+# Extract all rRNA genes
+riborez gene-extract --taxon-name Pseudomonas --genes rRNA
+
+# Extract specific protein-coding genes
+riborez gene-extract --taxon-name Ecoli --genes gyrA recA
 
 # Extract genes from a sample of 200 genomes
 riborez gene-extract --taxon-name Acinetobacter --sample-size 200
@@ -122,6 +131,7 @@ riborez gene-extract --taxon-name Bacillus --sample-size 100 --random-seed 123
 
 #### gene-extract
 - `--taxon-name`: Taxon name (used to locate downloaded data directory) [required]
+- `--genes`: Specific genes to extract (default: all genes). Examples: 16S, 23S, rRNA, gyrA, recA
 - `--data-root`: Path to data directory (auto-detected if not provided)
 - `--output-dir`: Output directory for extracted genes (auto-generated if not provided)
 - `--sample-size`: Number of genomes to sample (default: all available)

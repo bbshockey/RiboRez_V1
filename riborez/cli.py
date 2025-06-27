@@ -21,6 +21,9 @@ Examples:
   riborez download-taxa --taxon-name Salmonella --taxon-id 590 --dry-run
   riborez gene-extract --taxon-name Pseudomonas
   riborez gene-extract --taxon-name Acinetobacter --sample-size 200
+  riborez gene-extract --taxon-name Pseudomonas --genes 16S 23S
+  riborez gene-extract --taxon-name Ecoli --genes rRNA
+  riborez gene-extract --taxon-name Bacillus --genes gyrA recA
         """
     )
     
@@ -80,13 +83,18 @@ Examples:
     gene_extract_parser = subparsers.add_parser(
         "gene-extract",
         help="Extract genes from downloaded NCBI datasets",
-        description="Extract all genes (CDS and rRNA) from downloaded genome datasets"
+        description="Extract genes from downloaded genome datasets"
     )
     
     gene_extract_parser.add_argument(
         "--taxon-name", 
         required=True, 
         help="Taxon name (used to locate downloaded data directory)"
+    )
+    gene_extract_parser.add_argument(
+        "--genes", 
+        nargs="+", 
+        help="Specific genes to extract (default: all genes). Examples: 16S, 23S, rRNA, gyrA, recA"
     )
     gene_extract_parser.add_argument(
         "--data-root", 
@@ -133,7 +141,8 @@ Examples:
                 data_root=args.data_root,
                 output_dir=args.output_dir,
                 sample_size=args.sample_size,
-                random_seed=args.random_seed
+                random_seed=args.random_seed,
+                genes=args.genes
             )
         else:
             print(f"Unknown command: {args.command}")

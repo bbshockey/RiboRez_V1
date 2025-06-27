@@ -16,9 +16,9 @@ def parse_attributes(attr_str):
         item.split("=", 1) for item in attr_str.strip().split(";") if "=" in item
     )
 
-def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None, random_seed=42):
+def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None, random_seed=42, genes=None):
     """
-    Extract all genes from downloaded NCBI datasets.
+    Extract genes from downloaded NCBI datasets.
     
     Args:
         taxon_name (str): Taxon name (used for directory structure)
@@ -26,6 +26,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
         output_dir (str): Output directory for extracted genes (auto-generated if None)
         sample_size (int): Number of genomes to sample (None for all)
         random_seed (int): Random seed for sampling
+        genes (list): List of specific genes to extract (None for all genes)
     """
     # Auto-detect data root if not provided
     if data_root is None:
@@ -47,6 +48,14 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
     # Setup logging
     log_path = output_dir / "extraction_log.txt"
     log = open(log_path, "w")
+    
+    # Log gene extraction mode
+    if genes:
+        log.write(f"Extracting specific genes: {', '.join(genes)}\n")
+        print(f"[INFO] Extracting specific genes: {', '.join(genes)}")
+    else:
+        log.write("Extracting all genes (CDS and rRNA)\n")
+        print("[INFO] Extracting all genes (CDS and rRNA)")
     
     # Temporary directory for processing
     temp_dir = output_dir / "temp"
@@ -72,7 +81,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
         sampled_dirs = all_dirs
         print(f"[INFO] Processing all {len(all_dirs)} genomes")
     
-    # Process genomes and extract all genes
+    # Process genomes and extract genes
     processed_count = 0
     for subdir in sampled_dirs:
         print(f"[INFO] Processing: {subdir.name}")
@@ -124,6 +133,29 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                         attr_dict.get("ID") or
                         f"{feature_type}_{cols[0]}_{cols[3]}_{cols[4]}"
                     )
+                
+                # Filter by specific genes if requested
+                if genes:
+                    # Check if this gene matches any of the requested genes
+                    gene_matches = False
+                    for requested_gene in genes:
+                        # Handle rRNA requests
+                        if requested_gene.lower() in ["rrna", "rna"]:
+                            if gene_name in ["16S", "23S", "5S"]:
+                                gene_matches = True
+                                break
+                        # Handle specific rRNA requests
+                        elif requested_gene.upper() in ["16S", "23S", "5S"]:
+                            if gene_name == requested_gene.upper():
+                                gene_matches = True
+                                break
+                        # Handle gene name matching (case-insensitive)
+                        elif requested_gene.lower() in gene_name.lower():
+                            gene_matches = True
+                            break
+                    
+                    if not gene_matches:
+                        continue
                 
                 chrom = cols[0]
                 start, end = int(cols[3]), int(cols[4])
