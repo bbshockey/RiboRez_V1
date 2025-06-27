@@ -1,0 +1,7 @@
+# Core dependencies
+# Add your specific dependencies here as needed
+
+# For development (optional)
+# pytest>=6.0.0
+# black>=21.0.0
+# flake8>=3.8.0 
