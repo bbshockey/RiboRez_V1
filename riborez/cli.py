@@ -18,7 +18,6 @@ Examples:
   riborez download-taxa --taxon-name Pseudomonas --taxon-id 286
   riborez download-taxa --taxon-name Ecoli --taxon-id 562 --output-dir my_data --force
   riborez download-taxa --taxon-name Salmonella --taxon-id 590 --dry-run
-  riborez download-taxa --taxon-name Bacillus --taxon-id 1386 --max-genomes 10
         """
     )
     
@@ -49,11 +48,6 @@ Examples:
     download_parser.add_argument(
         "--output-dir", 
         help="Optional custom output directory"
-    )
-    download_parser.add_argument(
-        "--max-genomes", 
-        type=int, 
-        help="Maximum number of genomes to download (default: all available)"
     )
     download_parser.add_argument(
         "--rehydrate", 
@@ -96,8 +90,7 @@ Examples:
                 output_dir=args.output_dir,
                 rehydrate=args.rehydrate,
                 force=args.force,
-                dry_run=args.dry_run,
-                max_genomes=args.max_genomes
+                dry_run=args.dry_run
             )
         else:
             print(f"Unknown command: {args.command}")
