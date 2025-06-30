@@ -7,6 +7,7 @@ import argparse
 import sys
 from .download_taxa import download_taxa
 from .gene_extract import extract_genes
+from .primer_design import design_primers
 
 def main():
     """Main entry point for the riborez command."""
@@ -24,6 +25,8 @@ Examples:
   riborez gene-extract --taxon-name Pseudomonas --genes 16S 23S
   riborez gene-extract --taxon-name Ecoli --genes rRNA
   riborez gene-extract --taxon-name Bacillus --genes gyrA recA
+  riborez primer-design --input-folder Pseudomonas_AllGenesExtracted_rRNA
+  riborez primer-design --input-folder Ecoli_genes --min-sequences 20 --threads 4
         """
     )
     
@@ -116,6 +119,35 @@ Examples:
         help="Random seed for sampling (default: 42)"
     )
     
+    # Primer-design subcommand
+    primer_design_parser = subparsers.add_parser(
+        "primer-design",
+        help="Design primers for extracted genes using PMPrimer",
+        description="Design primers for genes using PMPrimer with multiple parameter sets"
+    )
+    
+    primer_design_parser.add_argument(
+        "--input-folder", 
+        required=True, 
+        help="Input folder containing FASTA files (e.g., output from gene-extract)"
+    )
+    primer_design_parser.add_argument(
+        "--output-folder", 
+        help="Output directory for primer design results (auto-generated if not provided)"
+    )
+    primer_design_parser.add_argument(
+        "--min-sequences", 
+        type=int, 
+        default=10, 
+        help="Minimum number of sequences required per gene (default: 10)"
+    )
+    primer_design_parser.add_argument(
+        "--threads", 
+        type=int, 
+        default=8, 
+        help="Number of threads to use (default: 8)"
+    )
+    
     # Parse arguments
     args = parser.parse_args()
     
@@ -143,6 +175,13 @@ Examples:
                 sample_size=args.sample_size,
                 random_seed=args.random_seed,
                 genes=args.genes
+            )
+        elif args.command == "primer-design":
+            design_primers(
+                input_folder=args.input_folder,
+                output_folder=args.output_folder,
+                min_sequences=args.min_sequences,
+                threads=args.threads
             )
         else:
             print(f"Unknown command: {args.command}")
