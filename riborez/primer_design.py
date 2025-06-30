@@ -139,7 +139,7 @@ def check_pmprimer_installed():
     except FileNotFoundError:
         return False
 
-def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8):
+def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8, run_amplicon_analysis=False):
     """
     Design primers for genes in the input folder using PMPrimer.
     
@@ -148,6 +148,7 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
         output_folder (str): Output directory (auto-generated if None)
         min_sequences (int): Minimum number of sequences required
         threads (int): Number of threads to use
+        run_amplicon_analysis (bool): Whether to run amplicon analysis after primer design
     """
     # Check if PMPrimer is installed
     if not check_pmprimer_installed():
@@ -242,5 +243,21 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
     print(f"[INFO] Successful: {successful}, Failed: {failed}")
     print(f"[INFO] Output directory: {output_folder}")
     print(f"[INFO] Log file: {log_file}")
+    
+    # Run amplicon analysis if requested
+    if run_amplicon_analysis:
+        print(f"\n[INFO] Running amplicon analysis on {output_folder}...")
+        try:
+            from .amplicon_analysis import analyze_amplicons
+            analyze_amplicons(
+                input_folder=str(output_folder),
+                output_folder=None,  # Auto-generate output folder
+                threads=threads
+            )
+            print(f"[SUCCESS] Amplicon analysis completed!")
+        except Exception as e:
+            print(f"[ERROR] Amplicon analysis failed: {e}")
+            print(f"[INFO] You can run amplicon analysis manually with:")
+            print(f"       riborez amplicon-analysis --input-folder {output_folder}")
     
     return output_folder 

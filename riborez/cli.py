@@ -8,6 +8,7 @@ import sys
 from .download_taxa import download_taxa
 from .gene_extract import extract_genes
 from .primer_design import design_primers
+from .amplicon_analysis import analyze_amplicons
 
 def main():
     """Main entry point for the riborez command."""
@@ -27,6 +28,9 @@ Examples:
   riborez gene-extract --taxon-name Bacillus --genes gyrA recA
   riborez primer-design --input-folder Pseudomonas_AllGenesExtracted_rRNA
   riborez primer-design --input-folder Ecoli_genes --min-sequences 20 --threads 4
+  riborez primer-design --input-folder Pseudomonas_genes --run-amplicon-analysis
+  riborez amplicon-analysis --input-folder Pseudomonas_AllGenesExtracted_rRNA_Primers
+  riborez amplicon-analysis --input-folder Ecoli_Primers --output-folder my_analysis --threads 8
         """
     )
     
@@ -147,6 +151,34 @@ Examples:
         default=8, 
         help="Number of threads to use (default: 8)"
     )
+    primer_design_parser.add_argument(
+        "--run-amplicon-analysis", 
+        action="store_true", 
+        help="Automatically run amplicon analysis on the output folder after primer design"
+    )
+    
+    # Amplicon-analysis subcommand
+    amplicon_analysis_parser = subparsers.add_parser(
+        "amplicon-analysis",
+        help="Analyze amplicons from primer design results",
+        description="Run comprehensive amplicon analysis workflow including amplification, mapping, and centralization"
+    )
+    
+    amplicon_analysis_parser.add_argument(
+        "--input-folder", 
+        required=True, 
+        help="Input folder containing primer design results (output from primer-design)"
+    )
+    amplicon_analysis_parser.add_argument(
+        "--output-folder", 
+        help="Output directory for analysis results (auto-generated if not provided)"
+    )
+    amplicon_analysis_parser.add_argument(
+        "--threads", 
+        type=int, 
+        default=8, 
+        help="Number of threads to use (default: 8)"
+    )
     
     # Parse arguments
     args = parser.parse_args()
@@ -181,6 +213,13 @@ Examples:
                 input_folder=args.input_folder,
                 output_folder=args.output_folder,
                 min_sequences=args.min_sequences,
+                threads=args.threads,
+                run_amplicon_analysis=args.run_amplicon_analysis
+            )
+        elif args.command == "amplicon-analysis":
+            analyze_amplicons(
+                input_folder=args.input_folder,
+                output_folder=args.output_folder,
                 threads=args.threads
             )
         else:
