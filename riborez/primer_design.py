@@ -74,8 +74,6 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
     if not os.path.exists(copied_fasta_path):
         shutil.copy(fasta_path, copied_fasta_path)
 
-    mc_filt_path = os.path.join(gene_dir, f"{gene_name}.filt.mc.fasta")
-    
     # Run alignment
     alignment_cmd = ["pmprimer", "-f", filename, "-p", "default", "-a", "muscle", "-e", "save"]
     log_message(f"Running alignment for {filename}: {' '.join(alignment_cmd)}", log_file)
@@ -85,9 +83,13 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
     except subprocess.CalledProcessError as e:
         log_message(f"Alignment failed for {filename}: {e.stderr}", log_file)
 
-    if not os.path.exists(mc_filt_path):
-        log_message(f"Alignment failed or not produced for {filename}; falling back to raw fasta", log_file)
-        mc_filt_path = filename
+    # Check if alignment output exists, otherwise use original file
+    mc_filt_filename = f"{gene_name}.filt.mc.fasta"
+    mc_filt_path = mc_filt_filename if os.path.exists(os.path.join(gene_dir, mc_filt_filename)) else filename
+    if mc_filt_path == mc_filt_filename:
+        log_message(f"Using aligned file: {mc_filt_filename}", log_file)
+    else:
+        log_message(f"Alignment failed or not produced for {filename}; using original file", log_file)
 
     # Primary primer design
     primary_cmd = ["pmprimer", "-f", mc_filt_path, "-p", "default", "-a", "threshold:0.5", "gaps:30", "tm:35", "primer2", "-e", "hpcnt:1000", "maxlen:1000", "save", "-d", "2"]
@@ -105,12 +107,17 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
     except subprocess.CalledProcessError as e:
         log_message(f"Fallback primer design failed for {filename}: {e.stderr}", log_file)
 
-    # Additional primer design commands
+    # Additional primer design commands - each checks for aligned file
+    additional_cmds = []
+    
+    # Check if aligned file exists for each command
+    current_mc_filt = mc_filt_filename if os.path.exists(os.path.join(gene_dir, mc_filt_filename)) else filename
+    
     additional_cmds = [
-        ["pmprimer", "-f", mc_filt_path, "-p", "default", "-a", "threshold:0.3", "gaps:90", "tm:35", "minlen:15", "maxlen:800", "merge", "primer2", "-e", "hpcnt:1000", "minlen:50", "save", "-d", "2"],
-        ["pmprimer", "-f", mc_filt_path, "-p", "default", "-a", "threshold:0.3", "gaps:50", "tm:30", "primer2", "-e", "hpcnt:2000", "maxlen:2000", "save", "-d", "2"],
-        ["pmprimer", "-f", mc_filt_path, "-a", "threshold:0.2", "merge", "primer2", "-e", "hpcnt:3000", "save"],
-        ["pmprimer", "-f", mc_filt_path, "-a", "threshold:0.3", "minlen:5", "merge", "primer2", "-e", "save"]
+        ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.3", "gaps:90", "tm:35", "minlen:15", "maxlen:800", "merge", "primer2", "-e", "hpcnt:1000", "minlen:50", "save", "-d", "2"],
+        ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.3", "gaps:50", "tm:30", "primer2", "-e", "hpcnt:2000", "maxlen:2000", "save", "-d", "2"],
+        ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.2", "merge", "primer2", "-e", "hpcnt:3000", "save"],
+        ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.3", "minlen:5", "merge", "primer2", "-e", "save"]
     ]
     
     for cmd in additional_cmds:
