@@ -197,15 +197,31 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
         median_length = statistics.median(lengths)
         threshold = median_length / 2
         
-        log.write(f"{gene_name}: median={median_length}, threshold={threshold}\n")
+        # Special length filter for 16S sequences
+        if gene_name == "16S":
+            min_16s_length = 1400
+            log.write(f"{gene_name}: median={median_length}, threshold={threshold}, 16S_min_length={min_16s_length}\n")
+        else:
+            log.write(f"{gene_name}: median={median_length}, threshold={threshold}\n")
         
         filtered_sequences = []
         for i in range(len(lengths)):
-            if lengths[i] >= threshold:
+            # Apply length filtering
+            passes_length_filter = True
+            
+            # Special 16S length filter
+            if gene_name == "16S" and lengths[i] < min_16s_length:
+                passes_length_filter = False
+                log.write(f"  Filtered 16S: {gene_headers[gene_name][i]} (length: {lengths[i]} < {min_16s_length} bp)\n")
+            # Standard median-based filter
+            elif lengths[i] < threshold:
+                passes_length_filter = False
+                log.write(f"  Filtered: {gene_headers[gene_name][i]} (length: {lengths[i]} < {threshold})\n")
+            
+            if passes_length_filter:
                 filtered_sequences.append((gene_headers[gene_name][i], gene_sequences[gene_name][i]))
             else:
                 filtered_count += 1
-                log.write(f"  Filtered: {gene_headers[gene_name][i]} (length: {lengths[i]})\n")
         
         if len(filtered_sequences) >= 5:
             saved_gene_groups += 1
