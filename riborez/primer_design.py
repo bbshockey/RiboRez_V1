@@ -126,7 +126,7 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
 def check_pmprimer_installed():
     """Check if PMPrimer is installed and available."""
     try:
-        result = subprocess.run(["pmprimer", "--version"], 
+        result = subprocess.run(["pmprimer", "--help"], 
                               capture_output=True, text=True)
         return result.returncode == 0
     except FileNotFoundError:

@@ -7,4 +7,5 @@
 # black>=21.0.0
 # flake8>=3.8.0
 
-ncbi-datasets-cli>=15.0.0 
+ncbi-datasets-cli>=15.0.0
+PMPrimer 
