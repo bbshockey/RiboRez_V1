@@ -77,7 +77,7 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
     mc_filt_path = os.path.join(gene_dir, f"{gene_name}.filt.mc.fasta")
     
     # Run alignment
-    alignment_cmd = ["pmprimer", "-f", copied_fasta_path, "-p", "default", "-a", "muscle", "-e", "save"]
+    alignment_cmd = ["pmprimer", "-f", filename, "-p", "default", "-a", "muscle", "-e", "save"]
     log_message(f"Running alignment for {filename}: {' '.join(alignment_cmd)}", log_file)
     
     try:
@@ -87,7 +87,7 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
 
     if not os.path.exists(mc_filt_path):
         log_message(f"Alignment failed or not produced for {filename}; falling back to raw fasta", log_file)
-        mc_filt_path = copied_fasta_path
+        mc_filt_path = filename
 
     # Primary primer design
     primary_cmd = ["pmprimer", "-f", mc_filt_path, "-p", "default", "-a", "threshold:0.5", "gaps:30", "tm:35", "primer2", "-e", "hpcnt:1000", "maxlen:1000", "save", "-d", "2"]
