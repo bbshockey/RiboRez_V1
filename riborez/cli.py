@@ -21,6 +21,7 @@ Examples:
   riborez download-taxa --taxon-name Pseudomonas --taxon-id 286
   riborez download-taxa --taxon-name Ecoli --taxon-id 562 --output-dir my_data --force
   riborez download-taxa --taxon-name Salmonella --taxon-id 590 --dry-run
+  riborez download-taxa --taxon-name Pseudomonas --taxon-id 286 --max-genomes 200
   riborez gene-extract --taxon-name Pseudomonas
   riborez gene-extract --taxon-name Acinetobacter --sample-size 200
   riborez gene-extract --taxon-name Pseudomonas --genes 16S 23S
@@ -84,6 +85,11 @@ Examples:
         "--dry-run", 
         action="store_true", 
         help="Print commands without executing"
+    )
+    download_parser.add_argument(
+        "--max-genomes", 
+        type=int, 
+        help="Maximum number of genomes to download (default: all available)"
     )
     
     # Gene-extract subcommand
@@ -197,7 +203,8 @@ Examples:
                 output_dir=args.output_dir,
                 rehydrate=args.rehydrate,
                 force=args.force,
-                dry_run=args.dry_run
+                dry_run=args.dry_run,
+                max_genomes=args.max_genomes
             )
         elif args.command == "gene-extract":
             extract_genes(

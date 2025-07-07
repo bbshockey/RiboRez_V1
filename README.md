@@ -2,22 +2,22 @@
 
 A tool for exploring mRNA transcripts for taxonomic resolution. 
 
-### PREREQUISITES 
+## PREREQUISITES 
 ```bash
 # prerequisites
 conda create -n env_name python=3.8
 conda install -c bioconda muscle
 ```
 
-This tool requires the NCBI Datasets command-line tool to be installed. You can install it using any of these methods (see the [official installation guide](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/download-and-install/) for more details):
+This tool also requires the NCBI Datasets command-line tool to be installed. You can install it using any of these methods (see the [official installation guide](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/download-and-install/) for more details):
 
-## Automatic Installation
+## NCBI Automatic Installation
 ```bash
 # Run the automatic installation script
 python install_ncbi_datasets.py
 ```
 
-## Manual Installation Options
+## NCBI Manual Installation Options
 
 #### Option 1: Using pip
 ```bash
@@ -61,6 +61,9 @@ riborez download-taxa --taxon-name Salmonella --taxon-id 590 --force
 
 # Dry run (prints ncbi datasets commands without executing)
 riborez download-taxa --taxon-name Bacillus --taxon-id 1386 --dry-run
+
+# Download only 200 genomes (useful for testing or limited resources)
+riborez download-taxa --taxon-name Pseudomonas --taxon-id 286 --max-genomes 200
 ```
 
 ### EXTRACT GENES
@@ -106,6 +109,7 @@ riborez primer-design --input-folder Pseudomonas_genes --run-amplicon-analysis
 - `--no-rehydrate`: Skip rehydration
 - `--force`: Overwrite output directory if it exists
 - `--dry-run`: Print commands without executing
+- `--max-genomes`: Maximum number of genomes to download (default: all available)
 
 #### gene-extract
 - `--taxon-name`: Taxon name (used to locate downloaded data directory) [required]
@@ -124,7 +128,7 @@ riborez primer-design --input-folder Pseudomonas_genes --run-amplicon-analysis
 
 ## COMPLETE WORKFLOW EXAMPLE
 
-Here's a complete example showing the typical workflow from genome download to amplicon analysis:
+Here's a complete example showing a typical workflow starting with downloading all available Pseudomonas genomes via ncbi datasets, to the extraction of all 16S rRNA from those genomes, to universal primer design and amplicon analysis of the 16S gene. 
 
 ```bash
 # 1. Download genomes for a taxon
@@ -132,7 +136,6 @@ riborez download-taxa --taxon-name Pseudomonas --taxon-id 286
 
 # 2. Extract specific genes (e.g., 16S rRNA)
 riborez gene-extract --taxon-name Pseudomonas --genes 16S
-
 
 # 3. Design primers AND analyze amplicons in one step
 riborez primer-design --input-folder Pseudomonas_AllGenesExtracted_rRNA --run-amplicon-analysis
