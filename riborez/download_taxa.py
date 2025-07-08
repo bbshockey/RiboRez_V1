@@ -19,7 +19,7 @@ def run_command(cmd_list, dry_run):
     if not dry_run:
         subprocess.run(cmd_list, check=True)
 
-def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, max_genomes=None):
+def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, max_genomes=None, reference=False):
     """
     Download and unpack NCBI genomes for a taxon.
     
@@ -31,6 +31,7 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, m
         force (bool): Overwrite output directory if it exists
         dry_run (bool): Print commands without executing
         max_genomes (int): Maximum number of genomes to download (None for all)
+        reference (bool): Restrict to reference genomes only (default: False)
     """
     # Check if datasets command is available and install if needed
     if not check_datasets_available():
@@ -73,11 +74,12 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, m
         summary_cmd = [
             "datasets", "summary", "genome", "taxon", str(taxon_id),
             "--limit", str(max_genomes),
-            "--reference",
             "--assembly-source", "RefSeq",
             "--report", "ids_only",
             "--as-json-lines"
         ]
+        if reference:
+            summary_cmd.insert(6, "--reference")
         
         # Run summary and pipe to dataformat
         if not dry_run:

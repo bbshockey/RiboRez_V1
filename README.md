@@ -64,6 +64,9 @@ riborez download-taxa --taxon-name Bacillus --taxon-id 1386 --dry-run
 
 # Download only 200 genomes (useful for testing or limited resources)
 riborez download-taxa --taxon-name Pseudomonas --taxon-id 286 --max-genomes 200
+
+# Download only 200 reference genomes (most restrictive)
+riborez download-taxa --taxon-name Pseudomonas --taxon-id 286 --max-genomes 200 --reference
 ```
 
 ### EXTRACT GENES
@@ -110,6 +113,7 @@ riborez primer-design --input-folder Pseudomonas_genes --run-amplicon-analysis
 - `--force`: Overwrite output directory if it exists
 - `--dry-run`: Print commands without executing
 - `--max-genomes`: Maximum number of genomes to download (default: all available)
+- `--reference`: Restrict to reference genomes only (default: all RefSeq genomes)
 
 #### gene-extract
 - `--taxon-name`: Taxon name (used to locate downloaded data directory) [required]
