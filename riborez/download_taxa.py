@@ -79,7 +79,7 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, m
             "--as-json-lines"
         ]
         if reference:
-            summary_cmd.insert(6, "--reference")
+            summary_cmd.append("--reference")
         
         # Run summary and pipe to dataformat
         if not dry_run:
