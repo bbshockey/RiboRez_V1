@@ -168,6 +168,11 @@ Examples:
         action="store_true", 
         help="Automatically run amplicon analysis on the output folder after primer design"
     )
+    primer_design_parser.add_argument(
+        "--faster",
+        action="store_true",
+        help="Run only alignment and primary PMPrimer commands (skip parameter sweeps)"
+    )
     
     # Amplicon-analysis subcommand
     amplicon_analysis_parser = subparsers.add_parser(
@@ -228,7 +233,8 @@ Examples:
                 output_folder=args.output_folder,
                 min_sequences=args.min_sequences,
                 threads=args.threads,
-                run_amplicon_analysis=args.run_amplicon_analysis
+                run_amplicon_analysis=args.run_amplicon_analysis,
+                faster=getattr(args, 'faster', False)
             )
         elif args.command == "amplicon-analysis":
             analyze_amplicons(

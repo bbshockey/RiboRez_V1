@@ -102,6 +102,39 @@ riborez primer-design --input-folder Ecoli_genes --min-sequences 20 --threads 4
 riborez primer-design --input-folder Pseudomonas_genes --run-amplicon-analysis
 ```
 
+## Primer Design (`primer-design`)
+
+Design primers for extracted genes using PMPrimer. This command supports a range of options for flexibility and speed.
+
+**Usage:**
+
+```bash
+riborez primer-design --input-folder <folder> [--output-folder <folder>] [--min-sequences <N>] [--threads <N>] [--run-amplicon-analysis] [--faster]
+```
+
+**Options:**
+- `--input-folder` (required): Input folder containing FASTA files (e.g., output from gene-extract)
+- `--output-folder`: Output directory for primer design results (auto-generated if not provided)
+- `--min-sequences`: Minimum number of sequences required per gene (default: 10)
+- `--threads`: Number of threads to use (default: 8)
+- `--run-amplicon-analysis`: Automatically run amplicon analysis on the output folder after primer design
+- `--faster`: **(New)** Run only the alignment and primary PMPrimer commands, skipping the full parameter sweep. This significantly speeds up the process, but may reduce the diversity of primer candidates.
+
+**Default Behavior:**
+- By default, `primer-design` runs a comprehensive set of PMPrimer commands with a wide parameter sweep to maximize the chance of successful primer design.
+
+**Faster Mode:**
+- If you specify `--faster`, only the alignment and the primary (plus fallback) PMPrimer commands are run for each gene. This is much faster, but explores a narrower parameter space.
+- Use `--faster` when you want a quick result or are running exploratory analyses.
+
+**Example:**
+
+```bash
+riborez primer-design --input-folder my_genes --faster
+```
+
+This will run a fast primer design workflow, skipping the additional parameter sweeps.
+
 ### Command Options
 
 #### download-taxa

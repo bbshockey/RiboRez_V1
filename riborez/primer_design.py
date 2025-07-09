@@ -57,7 +57,7 @@ def create_reference_mapping(gene_dir, gene_name, reference_mapping_dir):
         print(f"Error creating reference mapping for {gene_name}: {str(e)}")
         return None
 
-def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min_sequences, log_file):
+def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min_sequences, log_file, faster=False):
     """Run PMPrimer on a single FASTA file."""
     filename = os.path.basename(fasta_path)
     gene_name = os.path.splitext(filename)[0]
@@ -107,25 +107,24 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
     except subprocess.CalledProcessError as e:
         log_message(f"Fallback primer design failed for {filename}: {e.stderr}", log_file)
 
-    # Additional primer design commands - each checks for aligned file
-    additional_cmds = []
-    
-    # Check if aligned file exists for each command
-    current_mc_filt = mc_filt_filename if os.path.exists(os.path.join(gene_dir, mc_filt_filename)) else filename
-    
-    additional_cmds = [
-        ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.3", "gaps:90", "tm:35", "minlen:15", "maxlen:800", "merge", "primer2", "-e", "hpcnt:1000", "minlen:50", "save", "-d", "2"],
-        ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.3", "gaps:50", "tm:30", "primer2", "-e", "hpcnt:2000", "maxlen:2000", "save", "-d", "2"],
-        ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.2", "merge", "primer2", "-e", "hpcnt:3000", "save"],
-        ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.3", "minlen:5", "merge", "primer2", "-e", "save"]
-    ]
-    
-    for cmd in additional_cmds:
-        try:
-            subprocess.run(cmd, check=True, cwd=gene_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            log_message(f"Additional command successful: {' '.join(cmd)}", log_file)
-        except subprocess.CalledProcessError as e:
-            log_message(f"Additional command failed: {' '.join(cmd)}; {e.stderr}", log_file)
+    if not faster:
+        # Additional primer design commands - each checks for aligned file
+        additional_cmds = []
+        # Check if aligned file exists for each command
+        current_mc_filt = mc_filt_filename if os.path.exists(os.path.join(gene_dir, mc_filt_filename)) else filename
+        additional_cmds = [
+            ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.3", "gaps:90", "tm:35", "minlen:15", "maxlen:800", "merge", "primer2", "-e", "hpcnt:1000", "minlen:50", "save", "-d", "2"],
+            ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.3", "gaps:50", "tm:30", "primer2", "-e", "hpcnt:2000", "maxlen:2000", "save", "-d", "2"],
+            ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.2", "merge", "primer2", "-e", "hpcnt:3000", "save"],
+            ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.3", "minlen:5", "merge", "primer2", "-e", "save"],
+            ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.99", "gaps:100", "merge", "primer2", "tm:45", "-e", "hpcnt:600", "save"]
+        ]
+        for cmd in additional_cmds:
+            try:
+                subprocess.run(cmd, check=True, cwd=gene_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                log_message(f"Additional command successful: {' '.join(cmd)}", log_file)
+            except subprocess.CalledProcessError as e:
+                log_message(f"Additional command failed: {' '.join(cmd)}; {e.stderr}", log_file)
 
     create_reference_mapping(gene_dir, gene_name, reference_mapping_dir)
     return f"{filename}: COMPLETED"
@@ -139,7 +138,7 @@ def check_pmprimer_installed():
     except FileNotFoundError:
         return False
 
-def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8, run_amplicon_analysis=False):
+def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8, run_amplicon_analysis=False, faster=False):
     """
     Design primers for genes in the input folder using PMPrimer.
     
@@ -149,6 +148,7 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
         min_sequences (int): Minimum number of sequences required
         threads (int): Number of threads to use
         run_amplicon_analysis (bool): Whether to run amplicon analysis after primer design
+        faster (bool): If True, only run alignment and primary PMPrimer commands
     """
     # Check if PMPrimer is installed
     if not check_pmprimer_installed():
@@ -209,7 +209,7 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
     
     with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = {
-            executor.submit(run_pmprimer_in_subdir, f, output_folder, reference_mapping_dir, min_sequences, log_file): f 
+            executor.submit(run_pmprimer_in_subdir, f, output_folder, reference_mapping_dir, min_sequences, log_file, faster): f 
             for f in filtered_files
         }
         
