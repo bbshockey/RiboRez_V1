@@ -2,49 +2,47 @@
 
 A tool for exploring mRNA transcripts for taxonomic resolution. 
 
-## PREREQUISITES 
+## PREREQUISITES
+
+### Environment Setup
 ```bash
-# prerequisites
 conda create -n env_name python=3.8
 conda install -c bioconda muscle
 ```
 
-This tool also requires the NCBI Datasets command-line tool to be installed. You can install it using any of these methods (see the [official installation guide](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/download-and-install/) for more details):
+### NCBI Datasets CLI Installation
+This tool requires the NCBI Datasets command-line tool. You can install it using any of these methods (see the [official installation guide](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/download-and-install/) for more details):
 
-## NCBI Automatic Installation
+#### Automatic Installation
 ```bash
-# Run the automatic installation script
 python install_ncbi_datasets.py
 ```
 
-## NCBI Manual Installation Options
+#### Manual Installation Options
+- **Using pip:**
+  ```bash
+  pip install ncbi-datasets-cli
+  ```
+- **Using conda:**
+  ```bash
+  conda install -c conda-forge ncbi-datasets-cli
+  ```
 
-#### Option 1: Using pip
-```bash
-pip install ncbi-datasets-cli
-```
+### RiboRez Installation
 
-#### Option 2: Using conda
-```bash
-conda install -c conda-forge ncbi-datasets-cli
-```
-
-
-## RIBOREZ INSTALLATION
-
-### From Source
+#### From Source
 ```bash
 git clone https://github.com/bbshockey/RiboRez_V1.git
 cd RiboRez_V1
 pip install -e .
 ```
 
-### From GitHub
+#### From GitHub
 ```bash
 pip install git+https://github.com/bbshockey/RiboRez_V1.git
 ```
 
-**Note:** Make sure to install the NCBI Datasets CLI first (see Prerequisites above).
+**Note:** Make sure to install the NCBI Datasets CLI first (see above).
 
 ## USAGE
 
@@ -93,47 +91,14 @@ riborez gene-extract --taxon-name Bacillus --genes 16S recA tuf ccoN --sample-si
 Design universal primers for each gene using the PMPrimer python tool. Then analyze the resulting amplicons for differentiation. 
 ```bash
 # Basic primer design with default settings
-riborez primer-design --input-folder Pseudomonas_AllGenesExtracted_rRNA
+riborez primer-design --input-folder Pseudomonas_TranscriptsExtracted
 
 # Primer design with custom minimum sequences and thread count
-riborez primer-design --input-folder Ecoli_genes --min-sequences 20 --threads 4
+riborez primer-design --input-folder Ecoli_genes_TranscriptsExtracted --min-sequences 20 --threads 4
 
 # Primer design with automatic amplicon analysis (recommended workflow)
-riborez primer-design --input-folder Pseudomonas_genes --run-amplicon-analysis
+riborez primer-design --input-folder Pseudomonas_TranscriptsExtracted --run-amplicon-analysis
 ```
-
-## Primer Design (`primer-design`)
-
-Design primers for extracted genes using PMPrimer. This command supports a range of options for flexibility and speed.
-
-**Usage:**
-
-```bash
-riborez primer-design --input-folder <folder> [--output-folder <folder>] [--min-sequences <N>] [--threads <N>] [--run-amplicon-analysis] [--faster]
-```
-
-**Options:**
-- `--input-folder` (required): Input folder containing FASTA files (e.g., output from gene-extract)
-- `--output-folder`: Output directory for primer design results (auto-generated if not provided)
-- `--min-sequences`: Minimum number of sequences required per gene (default: 10)
-- `--threads`: Number of threads to use (default: 8)
-- `--run-amplicon-analysis`: Automatically run amplicon analysis on the output folder after primer design
-- `--faster`: **(New)** Run only the alignment and primary PMPrimer commands, skipping the full parameter sweep. This significantly speeds up the process, but may reduce the diversity of primer candidates.
-
-**Default Behavior:**
-- By default, `primer-design` runs a comprehensive set of PMPrimer commands with a wide parameter sweep to maximize the chance of successful primer design.
-
-**Faster Mode:**
-- If you specify `--faster`, only the alignment and the primary (plus fallback) PMPrimer commands are run for each gene. This is much faster, but explores a narrower parameter space.
-- Use `--faster` when you want a quick result or are running exploratory analyses.
-
-**Example:**
-
-```bash
-riborez primer-design --input-folder my_genes --faster
-```
-
-This will run a fast primer design workflow, skipping the additional parameter sweeps.
 
 ### Command Options
 
@@ -162,6 +127,7 @@ This will run a fast primer design workflow, skipping the additional parameter s
 - `--min-sequences`: Minimum number of sequences required per gene (default: 10)
 - `--threads`: Number of threads to use (default: 8)
 - `--run-amplicon-analysis`: Automatically run amplicon analysis on the output folder after primer design
+- `--faster`: Run only the alignment and primary PMPrimer commands, skipping the full parameter sweep. This significantly speeds up the process, but may reduce the diversity of primer candidates.
 
 ## COMPLETE WORKFLOW EXAMPLE
 
@@ -175,5 +141,5 @@ riborez download-taxa --taxon-name Pseudomonas --taxon-id 286
 riborez gene-extract --taxon-name Pseudomonas --genes 16S
 
 # 3. Design primers AND analyze amplicons in one step
-riborez primer-design --input-folder Pseudomonas_AllGenesExtracted_rRNA --run-amplicon-analysis
+riborez primer-design --input-folder Pseudomonas_TranscriptsExtracted --run-amplicon-analysis
 ```
