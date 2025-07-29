@@ -30,7 +30,7 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
     Handles gaps in aligned sequences properly.
     
     Args:
-        primer_seq: The primer sequence to search for
+        primer_seq: The primer sequence to search for (dashless format from PMPrimer)
         seq: The sequence to search in (may contain gaps)
         start_range: Start of the search range
         end_range: End of the search range
@@ -64,9 +64,11 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
         actual_end = None
         
         # Search through the range, skipping gaps when matching
+        # Since primer_seq is dashless but range_seq may have gaps, we need to match carefully
         for i in range(len(range_seq) - len(search_seq) + 1):
             match_found = True
             gap_offset = 0
+            primer_chars_matched = 0
             
             # Check if primer matches starting at position i
             for j, primer_char in enumerate(search_seq):
@@ -91,12 +93,17 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
                     match_found = False
                     break
                     
-                # Check if characters match
-                if primer_char != seq_char:
+                # Check if characters match (primer is dashless, so we only match non-gap chars)
+                if seq_char != '-' and primer_char != seq_char:
                     match_found = False
                     break
+                
+                # Count actual primer characters matched (excluding gaps)
+                if seq_char != '-':
+                    primer_chars_matched += 1
             
-            if match_found:
+            # Ensure we matched all primer characters (excluding gaps)
+            if match_found and primer_chars_matched == len(search_seq):
                 found_pos = i
                 # Calculate actual positions accounting for gaps
                 actual_start = start_range + i
@@ -200,6 +207,10 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
             print(f"    DEBUG: Reverse complement found in sequence without gaps!")
         if primer_seq in seq_no_gaps:
             print(f"    DEBUG: Original sequence found in sequence without gaps!")
+        # Show a sample of the sequence around the expected range
+        sample_start = max(0, start_range - 10)
+        sample_end = min(len(seq), end_range + 10)
+        print(f"    DEBUG: Sequence sample around range {start_range}-{end_range}: {seq[sample_start:sample_end]}")
     
     return None, None, False
 
@@ -270,11 +281,12 @@ def main(json_file, aligned_fasta, out_folder):
                     continue
 
                 # Find exact primer positions within their ranges
+                # Use the specific variants that were found, not the degenerate primers
                 f_actual_start, f_actual_end, f_found = find_primer_positions(
-                    forward_deg, seq, fstart, fend, is_reverse=False
+                    fmatch, seq, fstart, fend, is_reverse=False
                 )
                 r_actual_start, r_actual_end, r_found = find_primer_positions(
-                    reverse_deg, seq, rstart, rend, is_reverse=True
+                    rmatch, seq, rstart, rend, is_reverse=True
                 )
 
                 # Debug information
