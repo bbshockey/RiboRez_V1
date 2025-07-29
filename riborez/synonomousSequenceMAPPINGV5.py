@@ -37,39 +37,61 @@ def process_subfolder(folder_path):
 
     df = df.applymap(replace_rep)
 
-    # Update NumInputSequences and NumUniqueASVs
-    def update_counts(df, gene_name):
-        num_input_sequences = []
-        unique_bacteria_counts = []
-        asv_cols = [col for col in df.columns if 'ASV_' in col and '_Headers' in col]
-
+    # Update sequence counts and restructure columns
+    def update_counts_and_restructure(df, gene_name, folder_path):
+        # Get original sequence counts
+        original_fasta = os.path.join(folder_path, f"{gene_name}.fasta")
+        filtered_fasta = os.path.join(folder_path, f"{gene_name}.filt.fasta")
+        
+        # Count sequences in original FASTA
+        original_count = 0
+        if os.path.exists(original_fasta):
+            with open(original_fasta, 'r') as f:
+                original_count = sum(1 for line in f if line.startswith('>'))
+        
+        # Count sequences in filtered FASTA
+        non_redundant_count = 0
+        if os.path.exists(filtered_fasta):
+            with open(filtered_fasta, 'r') as f:
+                non_redundant_count = sum(1 for line in f if line.startswith('>'))
+        
+        # Count successful amplifications from aligned FASTA files
+        successful_amplifications = []
         for _, row in df.iterrows():
-            total_hits = 0
-            unique_hits = 0
-            for col in asv_cols:
-                val = row[col]
-                if isinstance(val, str):
-                    count = val.count(f'| {gene_name}')
-                    total_hits += count
-                    if count == 1:
-                        unique_hits += 1
-            num_input_sequences.append(total_hits)
-            unique_bacteria_counts.append(unique_hits)
-
-        df['NumInputSequences'] = num_input_sequences
-        df['NumberOfUniqueBacteria'] = unique_bacteria_counts
-
-        # Reorder columns to make NumberOfUniqueBacteria the 3rd column
-        cols = df.columns.tolist()
-        if 'NumberOfUniqueBacteria' in cols:
-            cols.insert(2, cols.pop(cols.index('NumberOfUniqueBacteria')))
-            df = df[cols]
-
+            primer_csv = row.get('PrimerPairCSV', '')
+            if primer_csv:
+                # Extract amplicon number from CSV filename
+                # Expected format: amplicon_1.csv, amplicon_2.csv, etc.
+                try:
+                    amplicon_num = primer_csv.replace('amplicon_', '').replace('.csv', '')
+                    aligned_fasta = os.path.join(folder_path, "output", f"aligned_amplicon_{amplicon_num}.fasta")
+                    if os.path.exists(aligned_fasta):
+                        with open(aligned_fasta, 'r') as f:
+                            amp_count = sum(1 for line in f if line.startswith('>'))
+                        successful_amplifications.append(amp_count)
+                    else:
+                        successful_amplifications.append(0)
+                except:
+                    successful_amplifications.append(0)
+            else:
+                successful_amplifications.append(0)
+        
+        # Remove problematic columns
+        columns_to_remove = ['NumInputSequences', 'NumberOfUniqueBacteria']
+        for col in columns_to_remove:
+            if col in df.columns:
+                df = df.drop(columns=[col])
+        
+        # Add new columns at the beginning (after PrimerPairCSV)
+        df.insert(1, 'Original#ofSequences', original_count)
+        df.insert(2, 'nonRedundantOriginal#ofSequences', non_redundant_count)
+        df.insert(3, 'SuccessfulAmplifications', successful_amplifications)
+        
         return df
 
 
 
-    df = update_counts(df, gene_name)
+    df = update_counts_and_restructure(df, gene_name, folder_path)
 
     # Save updated file
     output_file = os.path.join(folder_path, f"{gene_name}_processed_amplicon.csv")

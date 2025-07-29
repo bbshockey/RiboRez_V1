@@ -57,6 +57,79 @@ def create_reference_mapping(gene_dir, gene_name, reference_mapping_dir):
         print(f"Error creating reference mapping for {gene_name}: {str(e)}")
         return None
 
+
+def organize_pmprimer_outputs(output_folder):
+    """
+    Organize PMPrimer output files into a dedicated folder structure.
+    
+    Args:
+        output_folder (str): Path to the main output folder containing gene directories
+    """
+    import glob
+    
+    # Create organized output directory
+    organized_dir = os.path.join(output_folder, "pmprimer_outputs")
+    os.makedirs(organized_dir, exist_ok=True)
+    
+    # Create subdirectories for different file types
+    json_dir = os.path.join(organized_dir, "json_files")
+    csv_dir = os.path.join(organized_dir, "csv_files")
+    fasta_dir = os.path.join(organized_dir, "fasta_files")
+    other_dir = os.path.join(organized_dir, "other_files")
+    
+    for subdir in [json_dir, csv_dir, fasta_dir, other_dir]:
+        os.makedirs(subdir, exist_ok=True)
+    
+    # Find all PMPrimer output files in gene directories
+    gene_dirs = [d for d in os.listdir(output_folder) if os.path.isdir(os.path.join(output_folder, d)) and d != "reference_mappings"]
+    
+    moved_files = 0
+    
+    for gene_dir in gene_dirs:
+        gene_path = os.path.join(output_folder, gene_dir)
+        
+        # Find all files in the gene directory
+        for file_path in glob.glob(os.path.join(gene_path, "*")):
+            if os.path.isfile(file_path):
+                filename = os.path.basename(file_path)
+                
+                # Skip the original FASTA file and reference mapping
+                if filename.endswith(".fasta") and not any(pattern in filename for pattern in ["filt", "mc", "recommand"]):
+                    continue
+                if filename.endswith("_reference_mapping.tsv"):
+                    continue
+                
+                # Determine target directory based on file type
+                if filename.endswith(".json"):
+                    target_dir = json_dir
+                elif filename.endswith(".csv"):
+                    target_dir = csv_dir
+                elif filename.endswith((".fasta", ".fa")):
+                    target_dir = fasta_dir
+                else:
+                    target_dir = other_dir
+                
+                # Create a new filename with gene name prefix
+                new_filename = f"{gene_dir}_{filename}"
+                target_path = os.path.join(target_dir, new_filename)
+                
+                # Move the file
+                try:
+                    shutil.move(file_path, target_path)
+                    moved_files += 1
+                    print(f"Moved: {filename} -> {new_filename}")
+                except Exception as e:
+                    print(f"Failed to move {filename}: {e}")
+    
+    print(f"\nOrganized {moved_files} PMPrimer output files into {organized_dir}")
+    print(f"Structure:")
+    print(f"  {json_dir} - JSON files (primer data)")
+    print(f"  {csv_dir} - CSV files (primer results)")
+    print(f"  {fasta_dir} - FASTA files (aligned sequences)")
+    print(f"  {other_dir} - Other output files")
+    
+    return organized_dir
+
 def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min_sequences, log_file, faster=False):
     """Run PMPrimer on a single FASTA file."""
     filename = os.path.basename(fasta_path)
@@ -243,6 +316,14 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
     print(f"[INFO] Successful: {successful}, Failed: {failed}")
     print(f"[INFO] Output directory: {output_folder}")
     print(f"[INFO] Log file: {log_file}")
+    
+    # Organize PMPrimer output files
+    print(f"\n[INFO] Organizing PMPrimer output files...")
+    try:
+        organize_pmprimer_outputs(str(output_folder))
+        print(f"[SUCCESS] PMPrimer outputs organized!")
+    except Exception as e:
+        print(f"[WARNING] Failed to organize PMPrimer outputs: {e}")
     
     # Run amplicon analysis if requested
     if run_amplicon_analysis:
