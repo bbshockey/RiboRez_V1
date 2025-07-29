@@ -270,18 +270,19 @@ def main(json_file, aligned_fasta, out_folder):
                     continue
 
                 # Find exact primer positions within their ranges
+                # Use the specific variants that were found, not the degenerate primers
                 f_actual_start, f_actual_end, f_found = find_primer_positions(
-                    forward_deg, seq, fstart, fend, is_reverse=False
+                    fmatch, seq, fstart, fend, is_reverse=False
                 )
                 r_actual_start, r_actual_end, r_found = find_primer_positions(
-                    reverse_deg, seq, rstart, rend, is_reverse=True
+                    rmatch, seq, rstart, rend, is_reverse=True
                 )
 
                 # Debug information
-                print(f"  Forward primer: {forward_deg}")
+                print(f"  Forward variant: {fmatch}")
                 print(f"  Forward range: {fstart}-{fend}")
                 print(f"  Forward found: {f_found} at {f_actual_start}-{f_actual_end}")
-                print(f"  Reverse primer: {reverse_deg}")
+                print(f"  Reverse variant: {rmatch}")
                 print(f"  Reverse range: {rstart}-{rend}")
                 print(f"  Reverse found: {r_found} at {r_actual_start}-{r_actual_end}")
                 if not r_found:
