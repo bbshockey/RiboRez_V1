@@ -15,7 +15,16 @@ def extract_best_row(parent_folder):
                     df = pd.read_csv(file_path, low_memory=False)
                     df_filtered = df[df["AmpliconLength"] < 500]
                     if not df_filtered.empty:
-                        best_row = df_filtered.loc[df_filtered["NumUniqueASVs"].idxmax()]
+                        # Find the maximum number of unique ASVs
+                        max_asvs = df_filtered["NumUniqueASVs"].max()
+                        # Get all rows with the maximum ASV count
+                        max_asv_rows = df_filtered[df_filtered["NumUniqueASVs"] == max_asvs]
+                        
+                        # If there's a tie, choose the one with highest MedianHammingDistance
+                        if len(max_asv_rows) > 1:
+                            best_row = max_asv_rows.loc[max_asv_rows["MedianHammingDistance"].idxmax()]
+                        else:
+                            best_row = max_asv_rows.iloc[0]
                         
                         # Check if new columns exist, otherwise use fallback values
                         has_new_columns = all(col in df.columns for col in ["Original#ofSequences", "nonRedundantOriginal#ofSequences", "SuccessfulAmplifications"])

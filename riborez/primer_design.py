@@ -104,6 +104,14 @@ def organize_pmprimer_outputs(output_folder):
                         print(f"Moved: {gene_dir}/{filename} -> {gene_dir}/pmprimer_outputs/{filename}")
                     except Exception as e:
                         print(f"Failed to move {filename}: {e}")
+                
+                # Remove redundant amplicon.summary.csv files
+                if filename == "amplicon.summary.csv":
+                    try:
+                        os.remove(file_path)
+                        print(f"Removed redundant: {gene_dir}/{filename}")
+                    except Exception as e:
+                        print(f"Failed to remove {filename}: {e}")
     
     print(f"\nOrganized {moved_files} PMPrimer output files into gene-specific folders")
     print(f"Kept log files, reference mappings, and main summary in the main directory")
