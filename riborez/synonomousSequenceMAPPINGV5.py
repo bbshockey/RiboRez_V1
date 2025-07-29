@@ -55,23 +55,24 @@ def process_subfolder(folder_path):
             with open(filtered_fasta, 'r') as f:
                 non_redundant_count = sum(1 for line in f if line.startswith('>'))
         
-        # Count successful amplifications from aligned FASTA files
+        # Count successful amplifications from amplicon CSV files
         successful_amplifications = []
         for _, row in df.iterrows():
             primer_csv = row.get('PrimerPairCSV', '')
             if primer_csv:
-                # Extract amplicon number from CSV filename
-                # Expected format: amplicon_1.csv, amplicon_2.csv, etc.
-                try:
-                    amplicon_num = primer_csv.replace('amplicon_', '').replace('.csv', '')
-                    aligned_fasta = os.path.join(folder_path, "output", f"aligned_amplicon_{amplicon_num}.fasta")
-                    if os.path.exists(aligned_fasta):
-                        with open(aligned_fasta, 'r') as f:
-                            amp_count = sum(1 for line in f if line.startswith('>'))
+                # Look for the amplicon CSV file in the output directory
+                amplicon_csv = os.path.join(folder_path, "output", primer_csv)
+                if os.path.exists(amplicon_csv):
+                    try:
+                        # Count rows in the CSV file (excluding header)
+                        with open(amplicon_csv, 'r') as f:
+                            # Count lines and subtract 1 for header
+                            line_count = sum(1 for line in f)
+                            amp_count = max(0, line_count - 1)  # Subtract header row
                         successful_amplifications.append(amp_count)
-                    else:
+                    except:
                         successful_amplifications.append(0)
-                except:
+                else:
                     successful_amplifications.append(0)
             else:
                 successful_amplifications.append(0)
