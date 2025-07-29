@@ -90,9 +90,10 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
         if found_pos != -1:
             return actual_start, actual_end, True
     
-    # If no match found, try with a slightly expanded range (±5 positions)
-    expanded_start = max(0, start_range - 5)
-    expanded_end = min(len(seq) - 1, end_range + 5)
+    # If no match found, try with a more expanded range (±20 positions)
+    # This accounts for potential gap-induced shifts in the alignment
+    expanded_start = max(0, start_range - 20)
+    expanded_end = min(len(seq) - 1, end_range + 20)
     
     for search_seq in approaches:
         range_seq = seq[expanded_start:expanded_end + 1]
@@ -113,6 +114,28 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
             if match_found:
                 actual_start = expanded_start + i
                 actual_end = expanded_start + i + len(search_seq) - 1
+                return actual_start, actual_end, True
+    
+    # If still no match found, try searching the entire sequence as a last resort
+    # This handles cases where the PMPrimer range is significantly off
+    for search_seq in approaches:
+        # Search the entire sequence
+        for i in range(len(seq) - len(search_seq) + 1):
+            match_found = True
+            
+            for j, primer_char in enumerate(search_seq):
+                seq_char = seq[i + j]
+                
+                if seq_char == '-':
+                    continue
+                    
+                if primer_char != seq_char:
+                    match_found = False
+                    break
+            
+            if match_found:
+                actual_start = i
+                actual_end = i + len(search_seq) - 1
                 return actual_start, actual_end, True
     
     return None, None, False
@@ -198,6 +221,10 @@ def main(json_file, aligned_fasta, out_folder):
                 print(f"  Reverse primer: {reverse_deg}")
                 print(f"  Reverse range: {rstart}-{rend}")
                 print(f"  Reverse found: {r_found} at {r_actual_start}-{r_actual_end}")
+                if not r_found:
+                    print(f"  WARNING: Reverse primer not found in designated range {rstart}-{rend}")
+                    print(f"  Searched expanded range: {max(0, rstart-20)}-{min(len(seq)-1, rend+20)}")
+                    print(f"  Also searched entire sequence as fallback")
 
                 # Check for edge cases
                 error_status = "OK"
