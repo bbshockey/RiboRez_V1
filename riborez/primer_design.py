@@ -60,26 +60,13 @@ def create_reference_mapping(gene_dir, gene_name, reference_mapping_dir):
 
 def organize_pmprimer_outputs(output_folder):
     """
-    Organize PMPrimer and amplicon analysis output files into a dedicated folder structure.
+    Organize PMPrimer output files by moving timestamp-based files to gene-specific folders.
+    Keeps log files, reference mappings, and main summary in the main directory.
     
     Args:
         output_folder (str): Path to the main output folder containing gene directories
     """
     import glob
-    
-    # Create organized output directory
-    organized_dir = os.path.join(output_folder, "organized_outputs")
-    os.makedirs(organized_dir, exist_ok=True)
-    
-    # Create subdirectories for different file types
-    json_dir = os.path.join(organized_dir, "json_files")
-    csv_dir = os.path.join(organized_dir, "csv_files")
-    fasta_dir = os.path.join(organized_dir, "fasta_files")
-    summary_dir = os.path.join(organized_dir, "summary_files")
-    other_dir = os.path.join(organized_dir, "other_files")
-    
-    for subdir in [json_dir, csv_dir, fasta_dir, summary_dir, other_dir]:
-        os.makedirs(subdir, exist_ok=True)
     
     # Find all output files in gene directories
     gene_dirs = [d for d in os.listdir(output_folder) if os.path.isdir(os.path.join(output_folder, d)) and d != "reference_mappings"]
@@ -94,89 +81,34 @@ def organize_pmprimer_outputs(output_folder):
             if os.path.isfile(file_path):
                 filename = os.path.basename(file_path)
                 
-                # Skip the original FASTA file and reference mapping
-                if filename.endswith(".fasta") and not any(pattern in filename for pattern in ["filt", "mc", "recommand", "aligned"]):
-                    continue
+                # Skip files that should stay in the main directory
                 if filename.endswith("_reference_mapping.tsv"):
                     continue
                 
-                # Determine target directory based on file type
-                if filename.endswith(".json"):
-                    target_dir = json_dir
-                elif filename.endswith(".csv"):
-                    # Separate summary files from other CSV files
-                    if any(pattern in filename for pattern in ["summary", "processed", "best"]):
-                        target_dir = summary_dir
-                    else:
-                        target_dir = csv_dir
-                elif filename.endswith((".fasta", ".fa")):
-                    target_dir = fasta_dir
-                else:
-                    target_dir = other_dir
+                # Skip the original FASTA file
+                if filename.endswith(".fasta") and not any(pattern in filename for pattern in ["filt", "mc", "recommand"]):
+                    continue
                 
-                # Create a new filename with gene name prefix
-                new_filename = f"{gene_dir}_{filename}"
-                target_path = os.path.join(target_dir, new_filename)
-                
-                # Move the file
-                try:
-                    shutil.move(file_path, target_path)
-                    moved_files += 1
-                    print(f"Moved: {filename} -> {new_filename}")
-                except Exception as e:
-                    print(f"Failed to move {filename}: {e}")
-        
-        # Also check for files in output subdirectories
-        output_path = os.path.join(gene_path, "output")
-        if os.path.exists(output_path):
-            for file_path in glob.glob(os.path.join(output_path, "*")):
-                if os.path.isfile(file_path):
-                    filename = os.path.basename(file_path)
+                # Move timestamp-based PMPrimer files to gene-specific folders
+                if any(pattern in filename for pattern in ["recommand", "filt", "mc"]) and not filename.endswith("_reference_mapping.tsv"):
+                    # Create a subfolder for this gene's PMPrimer outputs
+                    gene_output_dir = os.path.join(gene_path, "pmprimer_outputs")
+                    os.makedirs(gene_output_dir, exist_ok=True)
                     
-                    # Determine target directory based on file type
-                    if filename.endswith(".csv"):
-                        target_dir = csv_dir
-                    elif filename.endswith((".fasta", ".fa")):
-                        target_dir = fasta_dir
-                    else:
-                        target_dir = other_dir
-                    
-                    # Create a new filename with gene name prefix
-                    new_filename = f"{gene_dir}_{filename}"
-                    target_path = os.path.join(target_dir, new_filename)
+                    target_path = os.path.join(gene_output_dir, filename)
                     
                     # Move the file
                     try:
                         shutil.move(file_path, target_path)
                         moved_files += 1
-                        print(f"Moved: {filename} -> {new_filename}")
+                        print(f"Moved: {gene_dir}/{filename} -> {gene_dir}/pmprimer_outputs/{filename}")
                     except Exception as e:
                         print(f"Failed to move {filename}: {e}")
     
-    # Move centralized summary files from the main directory
-    for file_path in glob.glob(os.path.join(output_folder, "*")):
-        if os.path.isfile(file_path):
-            filename = os.path.basename(file_path)
-            
-            # Look for centralized summary files
-            if filename.endswith("_best_amplicon_summary.csv"):
-                target_path = os.path.join(summary_dir, filename)
-                try:
-                    shutil.move(file_path, target_path)
-                    moved_files += 1
-                    print(f"Moved: {filename} -> {filename}")
-                except Exception as e:
-                    print(f"Failed to move {filename}: {e}")
+    print(f"\nOrganized {moved_files} PMPrimer output files into gene-specific folders")
+    print(f"Kept log files, reference mappings, and main summary in the main directory")
     
-    print(f"\nOrganized {moved_files} output files into {organized_dir}")
-    print(f"Structure:")
-    print(f"  {json_dir} - JSON files (primer data)")
-    print(f"  {csv_dir} - CSV files (primer results)")
-    print(f"  {fasta_dir} - FASTA files (aligned sequences)")
-    print(f"  {summary_dir} - Summary files (amplicon summaries)")
-    print(f"  {other_dir} - Other output files")
-    
-    return organized_dir
+    return output_folder
 
 def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min_sequences, log_file, faster=False):
     """Run PMPrimer on a single FASTA file."""
