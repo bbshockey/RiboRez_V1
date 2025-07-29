@@ -39,48 +39,83 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
     Returns:
         tuple: (primer_start, primer_end, found) where found is a boolean
     """
-    # For reverse primers, search for reverse complement
-    search_seq = reverse_complement(primer_seq) if is_reverse else primer_seq
+    # Try multiple approaches for finding the primer
+    approaches = []
     
-    # Extract the range to search in (keep gaps for accurate positioning)
-    range_seq = seq[start_range:end_range + 1]
+    # Approach 1: Search for reverse complement (original approach)
+    if is_reverse:
+        approaches.append(reverse_complement(primer_seq))
     
-    # Find the primer in the range (gaps are ignored in the search)
-    # We need to find the primer while accounting for gaps in position calculation
-    found_pos = -1
-    actual_start = None
-    actual_end = None
+    # Approach 2: Search for the primer as-is (in case PMPrimer already provides correct orientation)
+    approaches.append(primer_seq)
     
-    # Search through the range, skipping gaps when matching
-    for i in range(len(range_seq) - len(search_seq) + 1):
-        match_found = True
-        gap_count = 0
+    # Approach 3: If reverse primer, also try the original sequence
+    if is_reverse:
+        approaches.append(primer_seq)
+    
+    # Try each approach
+    for search_seq in approaches:
+        # Extract the range to search in (keep gaps for accurate positioning)
+        range_seq = seq[start_range:end_range + 1]
         
-        # Check if primer matches starting at position i
-        for j, primer_char in enumerate(search_seq):
-            seq_char = range_seq[i + j]
+        # Find the primer in the range (gaps are ignored in the search)
+        found_pos = -1
+        actual_start = None
+        actual_end = None
+        
+        # Search through the range, skipping gaps when matching
+        for i in range(len(range_seq) - len(search_seq) + 1):
+            match_found = True
             
-            # Count gaps before the current position
-            if seq_char == '-':
-                gap_count += 1
-                continue
+            # Check if primer matches starting at position i
+            for j, primer_char in enumerate(search_seq):
+                seq_char = range_seq[i + j]
                 
-            # If we've moved past gaps, check if characters match
-            if primer_char != seq_char:
-                match_found = False
+                # Skip gaps and continue matching
+                if seq_char == '-':
+                    continue
+                    
+                # Check if characters match
+                if primer_char != seq_char:
+                    match_found = False
+                    break
+            
+            if match_found:
+                found_pos = i
+                # Calculate actual positions accounting for gaps
+                actual_start = start_range + i
+                actual_end = start_range + i + len(search_seq) - 1
                 break
         
-        if match_found:
-            found_pos = i
-            # Calculate actual positions accounting for gaps
-            actual_start = start_range + i
-            actual_end = start_range + i + len(search_seq) - 1
-            break
+        if found_pos != -1:
+            return actual_start, actual_end, True
     
-    if found_pos == -1:
-        return None, None, False
+    # If no match found, try with a slightly expanded range (±5 positions)
+    expanded_start = max(0, start_range - 5)
+    expanded_end = min(len(seq) - 1, end_range + 5)
     
-    return actual_start, actual_end, True
+    for search_seq in approaches:
+        range_seq = seq[expanded_start:expanded_end + 1]
+        
+        for i in range(len(range_seq) - len(search_seq) + 1):
+            match_found = True
+            
+            for j, primer_char in enumerate(search_seq):
+                seq_char = range_seq[i + j]
+                
+                if seq_char == '-':
+                    continue
+                    
+                if primer_char != seq_char:
+                    match_found = False
+                    break
+            
+            if match_found:
+                actual_start = expanded_start + i
+                actual_end = expanded_start + i + len(search_seq) - 1
+                return actual_start, actual_end, True
+    
+    return None, None, False
 
 
 def main(json_file, aligned_fasta, out_folder):
@@ -155,6 +190,14 @@ def main(json_file, aligned_fasta, out_folder):
                 r_actual_start, r_actual_end, r_found = find_primer_positions(
                     reverse_deg, seq, rstart, rend, is_reverse=True
                 )
+
+                # Debug information
+                print(f"  Forward primer: {forward_deg}")
+                print(f"  Forward range: {fstart}-{fend}")
+                print(f"  Forward found: {f_found} at {f_actual_start}-{f_actual_end}")
+                print(f"  Reverse primer: {reverse_deg}")
+                print(f"  Reverse range: {rstart}-{rend}")
+                print(f"  Reverse found: {r_found} at {r_actual_start}-{r_actual_end}")
 
                 # Check for edge cases
                 error_status = "OK"
