@@ -66,14 +66,30 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
         # Search through the range, skipping gaps when matching
         for i in range(len(range_seq) - len(search_seq) + 1):
             match_found = True
+            gap_offset = 0
             
             # Check if primer matches starting at position i
             for j, primer_char in enumerate(search_seq):
-                seq_char = range_seq[i + j]
+                # Account for gaps we've skipped
+                actual_pos = i + j + gap_offset
+                if actual_pos >= len(range_seq):
+                    match_found = False
+                    break
+                    
+                seq_char = range_seq[actual_pos]
                 
-                # Skip gaps and continue matching
-                if seq_char == '-':
-                    continue
+                # Skip gaps and adjust offset
+                while seq_char == '-' and actual_pos < len(range_seq) - 1:
+                    gap_offset += 1
+                    actual_pos = i + j + gap_offset
+                    if actual_pos >= len(range_seq):
+                        match_found = False
+                        break
+                    seq_char = range_seq[actual_pos]
+                
+                if actual_pos >= len(range_seq):
+                    match_found = False
+                    break
                     
                 # Check if characters match
                 if primer_char != seq_char:
@@ -100,12 +116,29 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
         
         for i in range(len(range_seq) - len(search_seq) + 1):
             match_found = True
+            gap_offset = 0
             
             for j, primer_char in enumerate(search_seq):
-                seq_char = range_seq[i + j]
+                # Account for gaps we've skipped
+                actual_pos = i + j + gap_offset
+                if actual_pos >= len(range_seq):
+                    match_found = False
+                    break
+                    
+                seq_char = range_seq[actual_pos]
                 
-                if seq_char == '-':
-                    continue
+                # Skip gaps and adjust offset
+                while seq_char == '-' and actual_pos < len(range_seq) - 1:
+                    gap_offset += 1
+                    actual_pos = i + j + gap_offset
+                    if actual_pos >= len(range_seq):
+                        match_found = False
+                        break
+                    seq_char = range_seq[actual_pos]
+                
+                if actual_pos >= len(range_seq):
+                    match_found = False
+                    break
                     
                 if primer_char != seq_char:
                     match_found = False
@@ -122,12 +155,29 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
         # Search the entire sequence
         for i in range(len(seq) - len(search_seq) + 1):
             match_found = True
+            gap_offset = 0
             
             for j, primer_char in enumerate(search_seq):
-                seq_char = seq[i + j]
+                # Account for gaps we've skipped
+                actual_pos = i + j + gap_offset
+                if actual_pos >= len(seq):
+                    match_found = False
+                    break
+                    
+                seq_char = seq[actual_pos]
                 
-                if seq_char == '-':
-                    continue
+                # Skip gaps and adjust offset
+                while seq_char == '-' and actual_pos < len(seq) - 1:
+                    gap_offset += 1
+                    actual_pos = i + j + gap_offset
+                    if actual_pos >= len(seq):
+                        match_found = False
+                        break
+                    seq_char = seq[actual_pos]
+                
+                if actual_pos >= len(seq):
+                    match_found = False
+                    break
                     
                 if primer_char != seq_char:
                     match_found = False
@@ -137,6 +187,19 @@ def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=Fa
                 actual_start = i
                 actual_end = i + len(search_seq) - 1
                 return actual_start, actual_end, True
+    
+    # If we get here, no match was found with any approach
+    # Let's add some debugging to see what we're searching for
+    if is_reverse:
+        print(f"    DEBUG: Reverse primer '{primer_seq}' not found in entire sequence")
+        print(f"    DEBUG: Tried reverse complement: '{reverse_complement(primer_seq)}'")
+        print(f"    DEBUG: Tried original sequence: '{primer_seq}'")
+        # Let's also try a simple string search to see if it's there at all
+        seq_no_gaps = seq.replace('-', '')
+        if reverse_complement(primer_seq) in seq_no_gaps:
+            print(f"    DEBUG: Reverse complement found in sequence without gaps!")
+        if primer_seq in seq_no_gaps:
+            print(f"    DEBUG: Original sequence found in sequence without gaps!")
     
     return None, None, False
 
