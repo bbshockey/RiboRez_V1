@@ -24,6 +24,65 @@ def reverse_complement(seq):
     return seq.translate(base_map)[::-1]
 
 
+def find_primer_positions(primer_seq, seq, start_range, end_range, is_reverse=False):
+    """
+    Find the exact start and end positions of a primer within its designated range.
+    Handles gaps in aligned sequences properly.
+    
+    Args:
+        primer_seq: The primer sequence to search for
+        seq: The sequence to search in (may contain gaps)
+        start_range: Start of the search range
+        end_range: End of the search range
+        is_reverse: Whether this is a reverse primer (search for reverse complement)
+    
+    Returns:
+        tuple: (primer_start, primer_end, found) where found is a boolean
+    """
+    # For reverse primers, search for reverse complement
+    search_seq = reverse_complement(primer_seq) if is_reverse else primer_seq
+    
+    # Extract the range to search in (keep gaps for accurate positioning)
+    range_seq = seq[start_range:end_range + 1]
+    
+    # Find the primer in the range (gaps are ignored in the search)
+    # We need to find the primer while accounting for gaps in position calculation
+    found_pos = -1
+    actual_start = None
+    actual_end = None
+    
+    # Search through the range, skipping gaps when matching
+    for i in range(len(range_seq) - len(search_seq) + 1):
+        match_found = True
+        gap_count = 0
+        
+        # Check if primer matches starting at position i
+        for j, primer_char in enumerate(search_seq):
+            seq_char = range_seq[i + j]
+            
+            # Count gaps before the current position
+            if seq_char == '-':
+                gap_count += 1
+                continue
+                
+            # If we've moved past gaps, check if characters match
+            if primer_char != seq_char:
+                match_found = False
+                break
+        
+        if match_found:
+            found_pos = i
+            # Calculate actual positions accounting for gaps
+            actual_start = start_range + i
+            actual_end = start_range + i + len(search_seq) - 1
+            break
+    
+    if found_pos == -1:
+        return None, None, False
+    
+    return actual_start, actual_end, True
+
+
 def main(json_file, aligned_fasta, out_folder):
     with open(json_file) as jf:
         data = json.load(jf)
@@ -63,12 +122,12 @@ def main(json_file, aligned_fasta, out_folder):
             preserved_writer.writerow([
                 "Header", "ForwardPrimer", "ReversePrimer",
                 "AmpliconStart", "AmpliconEnd", "AmpliconSequence",
-                "ForwardVariant", "ReverseVariant"
+                "ForwardVariant", "ReverseVariant", "ErrorStatus"
             ])
             dashless_writer.writerow([
                 "Header", "ForwardPrimer", "ReversePrimer",
                 "AmpliconStart", "AmpliconEnd", "AmpliconSequence",
-                "ForwardVariant", "ReverseVariant"
+                "ForwardVariant", "ReverseVariant", "ErrorStatus"
             ])
 
             for header, seq in seq_dict.items():
@@ -89,20 +148,46 @@ def main(json_file, aligned_fasta, out_folder):
                     print("No reverse match")
                     continue
 
-                amp_start = fend
-                amp_end = rstart
+                # Find exact primer positions within their ranges
+                f_actual_start, f_actual_end, f_found = find_primer_positions(
+                    forward_deg, seq, fstart, fend, is_reverse=False
+                )
+                r_actual_start, r_actual_end, r_found = find_primer_positions(
+                    reverse_deg, seq, rstart, rend, is_reverse=True
+                )
+
+                # Check for edge cases
+                error_status = "OK"
+                if not f_found:
+                    error_status = "FORWARD_PRIMER_NOT_FOUND"
+                elif not r_found:
+                    error_status = "REVERSE_PRIMER_NOT_FOUND"
+                elif f_actual_end >= r_actual_start:
+                    error_status = "PRIMERS_OVERLAP_OR_WRONG_ORDER"
+
+                # Calculate amplicon coordinates using exact primer positions
+                if f_found and r_found and f_actual_end < r_actual_start:
+                    amp_start = f_actual_end
+                    amp_end = r_actual_start
+                else:
+                    # Fallback to range boundaries if there's an error
+                    amp_start = fend
+                    amp_end = rstart
+                    if error_status == "OK":
+                        error_status = "USING_RANGE_BOUNDARIES"
+
                 amplicon_seq_raw = seq[amp_start:amp_end] if amp_start < amp_end else ""
                 amplicon_seq = amplicon_seq_raw.replace("-", "")
 
                 preserved_writer.writerow([
                     header, forward_deg, reverse_deg,
                     amp_start, amp_end, amplicon_seq_raw,
-                    fmatch, rmatch
+                    fmatch, rmatch, error_status
                 ])
                 dashless_writer.writerow([
                     header, forward_deg, reverse_deg,
                     amp_start, amp_end, amplicon_seq,
-                    fmatch, rmatch
+                    fmatch, rmatch, error_status
                 ])
 
                 matches += 1
