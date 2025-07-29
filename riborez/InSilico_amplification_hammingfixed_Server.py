@@ -210,12 +210,14 @@ def main(json_file, aligned_fasta, out_folder):
 
                 # Calculate amplicon coordinates using exact primer positions
                 if f_found and r_found and f_actual_end < r_actual_start:
-                    amp_start = f_actual_end
-                    amp_end = r_actual_start
+                    # Amplicon should be the region between primers (not including primers)
+                    # Start after the forward primer ends, end before the reverse primer starts
+                    amp_start = f_actual_end + 1
+                    amp_end = r_actual_start - 1
                 else:
                     # Fallback to range boundaries if there's an error
-                    amp_start = fend
-                    amp_end = rstart
+                    amp_start = fend + 1
+                    amp_end = rstart - 1
                     if error_status == "OK":
                         error_status = "USING_RANGE_BOUNDARIES"
 
