@@ -230,26 +230,26 @@ def main(json_file, aligned_fasta, out_folder):
         matches = 0
 
         preserved_filename = f"amplicon_{i}.csv"
-        dashless_filename = f"amplicon_{i}_dashless.csv"
+        # dashless_filename = f"amplicon_{i}_dashless.csv"
 
         preserved_path = os.path.join(out_folder, preserved_filename)
-        dashless_path = os.path.join(os.path.dirname(out_folder), dashless_filename)
+        # dashless_path = os.path.join(os.path.dirname(out_folder), dashless_filename)
   # MAIN directory
 
-        with open(preserved_path, "w", newline="") as preserved_file, open(dashless_path, "w", newline="") as dashless_file:
+        with open(preserved_path, "w", newline="") as preserved_file:  # , open(dashless_path, "w", newline="") as dashless_file:
             preserved_writer = csv.writer(preserved_file)
-            dashless_writer = csv.writer(dashless_file)
+            # dashless_writer = csv.writer(dashless_file)
 
             preserved_writer.writerow([
                 "Header", "ForwardPrimer", "ReversePrimer",
                 "AmpliconStart", "AmpliconEnd", "AmpliconSequence",
                 "ForwardVariant", "ReverseVariant", "ErrorStatus"
             ])
-            dashless_writer.writerow([
-                "Header", "ForwardPrimer", "ReversePrimer",
-                "AmpliconStart", "AmpliconEnd", "AmpliconSequence",
-                "ForwardVariant", "ReverseVariant", "ErrorStatus"
-            ])
+            # dashless_writer.writerow([
+            #     "Header", "ForwardPrimer", "ReversePrimer",
+            #     "AmpliconStart", "AmpliconEnd", "AmpliconSequence",
+            #     "ForwardVariant", "ReverseVariant", "ErrorStatus"
+            # ])
 
             for header, seq in seq_dict.items():
                 f_slice = seq[max(0, fstart - 1):fend + 2].replace("-", "")
@@ -312,18 +312,18 @@ def main(json_file, aligned_fasta, out_folder):
                         error_status = "USING_RANGE_BOUNDARIES"
 
                 amplicon_seq_raw = seq[amp_start:amp_end] if amp_start < amp_end else ""
-                amplicon_seq = amplicon_seq_raw.replace("-", "")
+                # amplicon_seq = amplicon_seq_raw.replace("-", "")
 
                 preserved_writer.writerow([
                     header, forward_deg, reverse_deg,
                     amp_start, amp_end, amplicon_seq_raw,
                     fmatch, rmatch, error_status
                 ])
-                dashless_writer.writerow([
-                    header, forward_deg, reverse_deg,
-                    amp_start, amp_end, amplicon_seq,
-                    fmatch, rmatch, error_status
-                ])
+                # dashless_writer.writerow([
+                #     header, forward_deg, reverse_deg,
+                #     amp_start, amp_end, amplicon_seq,
+                #     fmatch, rmatch, error_status
+                # ])
 
                 matches += 1
 
