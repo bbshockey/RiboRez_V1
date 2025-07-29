@@ -60,7 +60,7 @@ def create_reference_mapping(gene_dir, gene_name, reference_mapping_dir):
 
 def organize_pmprimer_outputs(output_folder):
     """
-    Organize PMPrimer output files into a dedicated folder structure.
+    Organize PMPrimer and amplicon analysis output files into a dedicated folder structure.
     
     Args:
         output_folder (str): Path to the main output folder containing gene directories
@@ -68,19 +68,20 @@ def organize_pmprimer_outputs(output_folder):
     import glob
     
     # Create organized output directory
-    organized_dir = os.path.join(output_folder, "pmprimer_outputs")
+    organized_dir = os.path.join(output_folder, "organized_outputs")
     os.makedirs(organized_dir, exist_ok=True)
     
     # Create subdirectories for different file types
     json_dir = os.path.join(organized_dir, "json_files")
     csv_dir = os.path.join(organized_dir, "csv_files")
     fasta_dir = os.path.join(organized_dir, "fasta_files")
+    summary_dir = os.path.join(organized_dir, "summary_files")
     other_dir = os.path.join(organized_dir, "other_files")
     
-    for subdir in [json_dir, csv_dir, fasta_dir, other_dir]:
+    for subdir in [json_dir, csv_dir, fasta_dir, summary_dir, other_dir]:
         os.makedirs(subdir, exist_ok=True)
     
-    # Find all PMPrimer output files in gene directories
+    # Find all output files in gene directories
     gene_dirs = [d for d in os.listdir(output_folder) if os.path.isdir(os.path.join(output_folder, d)) and d != "reference_mappings"]
     
     moved_files = 0
@@ -94,7 +95,7 @@ def organize_pmprimer_outputs(output_folder):
                 filename = os.path.basename(file_path)
                 
                 # Skip the original FASTA file and reference mapping
-                if filename.endswith(".fasta") and not any(pattern in filename for pattern in ["filt", "mc", "recommand"]):
+                if filename.endswith(".fasta") and not any(pattern in filename for pattern in ["filt", "mc", "recommand", "aligned"]):
                     continue
                 if filename.endswith("_reference_mapping.tsv"):
                     continue
@@ -103,7 +104,11 @@ def organize_pmprimer_outputs(output_folder):
                 if filename.endswith(".json"):
                     target_dir = json_dir
                 elif filename.endswith(".csv"):
-                    target_dir = csv_dir
+                    # Separate summary files from other CSV files
+                    if any(pattern in filename for pattern in ["summary", "processed", "best"]):
+                        target_dir = summary_dir
+                    else:
+                        target_dir = csv_dir
                 elif filename.endswith((".fasta", ".fa")):
                     target_dir = fasta_dir
                 else:
@@ -120,12 +125,55 @@ def organize_pmprimer_outputs(output_folder):
                     print(f"Moved: {filename} -> {new_filename}")
                 except Exception as e:
                     print(f"Failed to move {filename}: {e}")
+        
+        # Also check for files in output subdirectories
+        output_path = os.path.join(gene_path, "output")
+        if os.path.exists(output_path):
+            for file_path in glob.glob(os.path.join(output_path, "*")):
+                if os.path.isfile(file_path):
+                    filename = os.path.basename(file_path)
+                    
+                    # Determine target directory based on file type
+                    if filename.endswith(".csv"):
+                        target_dir = csv_dir
+                    elif filename.endswith((".fasta", ".fa")):
+                        target_dir = fasta_dir
+                    else:
+                        target_dir = other_dir
+                    
+                    # Create a new filename with gene name prefix
+                    new_filename = f"{gene_dir}_{filename}"
+                    target_path = os.path.join(target_dir, new_filename)
+                    
+                    # Move the file
+                    try:
+                        shutil.move(file_path, target_path)
+                        moved_files += 1
+                        print(f"Moved: {filename} -> {new_filename}")
+                    except Exception as e:
+                        print(f"Failed to move {filename}: {e}")
     
-    print(f"\nOrganized {moved_files} PMPrimer output files into {organized_dir}")
+    # Move centralized summary files from the main directory
+    for file_path in glob.glob(os.path.join(output_folder, "*")):
+        if os.path.isfile(file_path):
+            filename = os.path.basename(file_path)
+            
+            # Look for centralized summary files
+            if filename.endswith("_best_amplicon_summary.csv"):
+                target_path = os.path.join(summary_dir, filename)
+                try:
+                    shutil.move(file_path, target_path)
+                    moved_files += 1
+                    print(f"Moved: {filename} -> {filename}")
+                except Exception as e:
+                    print(f"Failed to move {filename}: {e}")
+    
+    print(f"\nOrganized {moved_files} output files into {organized_dir}")
     print(f"Structure:")
     print(f"  {json_dir} - JSON files (primer data)")
     print(f"  {csv_dir} - CSV files (primer results)")
     print(f"  {fasta_dir} - FASTA files (aligned sequences)")
+    print(f"  {summary_dir} - Summary files (amplicon summaries)")
     print(f"  {other_dir} - Other output files")
     
     return organized_dir
@@ -317,14 +365,6 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
     print(f"[INFO] Output directory: {output_folder}")
     print(f"[INFO] Log file: {log_file}")
     
-    # Organize PMPrimer output files
-    print(f"\n[INFO] Organizing PMPrimer output files...")
-    try:
-        organize_pmprimer_outputs(str(output_folder))
-        print(f"[SUCCESS] PMPrimer outputs organized!")
-    except Exception as e:
-        print(f"[WARNING] Failed to organize PMPrimer outputs: {e}")
-    
     # Run amplicon analysis if requested
     if run_amplicon_analysis:
         print(f"\n[INFO] Running amplicon analysis on {output_folder}...")
@@ -340,5 +380,13 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
             print(f"[ERROR] Amplicon analysis failed: {e}")
             print(f"[INFO] You can run amplicon analysis manually with:")
             print(f"       riborez amplicon-analysis --input-folder {output_folder}")
+    
+    # Organize all output files AFTER all analysis is complete
+    print(f"\n[INFO] Organizing all output files...")
+    try:
+        organize_pmprimer_outputs(str(output_folder))
+        print(f"[SUCCESS] All outputs organized!")
+    except Exception as e:
+        print(f"[WARNING] Failed to organize outputs: {e}")
     
     return output_folder 
