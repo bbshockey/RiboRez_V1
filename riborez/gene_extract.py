@@ -11,10 +11,26 @@ import random
 from collections import defaultdict
 
 def parse_attributes(attr_str):
-    """Parse GFF attributes string into a dictionary."""
-    return dict(
-        item.split("=", 1) for item in attr_str.strip().split(";") if "=" in item
-    )
+    """Parse GFF/GTF attributes string into a dictionary."""
+    attrs = {}
+    for item in attr_str.strip().split(";"):
+        item = item.strip()
+        if not item:
+            continue
+        
+        # Handle GFF format: key=value
+        if "=" in item:
+            key, value = item.split("=", 1)
+            attrs[key.strip()] = value.strip()
+        # Handle GTF format: key "value"
+        elif ' "' in item:
+            parts = item.split(' "', 1)
+            if len(parts) == 2:
+                key = parts[0].strip()
+                value = parts[1].rstrip('"').strip()
+                attrs[key] = value
+    
+    return attrs
 
 def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None, random_seed=42, genes=None):
     """
