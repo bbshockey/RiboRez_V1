@@ -137,6 +137,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
         gff_path = annotation_files[0]
         seq_dict = SeqIO.to_dict(SeqIO.parse(fasta_path, "fasta"))
         
+        genes_found = 0
         with gff_path.open() as gff:
             for line in gff:
                 if line.startswith("#"):
@@ -151,6 +152,8 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 # Skip non-CDS and non-rRNA features
                 if feature_type not in ["CDS", "rRNA"]:
                     continue
+                
+                genes_found += 1
                 
                 # Extract and normalize annotation fields
                 product = attr_dict.get("product", "").lower()
@@ -217,6 +220,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 
                 log.write(f"  {gene_name}: {full_header} (length: {seq_length})\n")
         
+        print(f"[DEBUG] {subdir.name}: Found {genes_found} CDS/rRNA features, extracted {len(gene_headers)} unique genes")
         processed_count += 1
     
     # Calculate median lengths and apply length filter
