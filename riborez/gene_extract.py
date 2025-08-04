@@ -114,6 +114,15 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
         gff_files = list(subdir.glob("*.gff"))
         gtf_files = list(subdir.glob("*.gtf"))
         
+        # Debug output
+        print(f"[DEBUG] {subdir.name}: Found {len(all_fasta_files)} FASTA files, {len(gff_files)} GFF files, {len(gtf_files)} GTF files")
+        if all_fasta_files:
+            print(f"[DEBUG] FASTA files: {[f.name for f in all_fasta_files]}")
+        if gff_files:
+            print(f"[DEBUG] GFF files: {[f.name for f in gff_files]}")
+        if gtf_files:
+            print(f"[DEBUG] GTF files: {[f.name for f in gtf_files]}")
+        
         if not all_fasta_files:
             print(f"[WARNING] Missing FASTA files in {subdir.name}")
             continue
