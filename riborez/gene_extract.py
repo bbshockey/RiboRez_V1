@@ -87,11 +87,18 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
         print(f"[INFO] Processing: {subdir.name}")
         log.write(f"\n[{subdir.name}]\n")
         
+        # Look for FASTA files with various extensions
         fna_files = list(subdir.glob("*.fna"))
+        fasta_files = list(subdir.glob("*.fasta"))
+        fa_files = list(subdir.glob("*.fa"))
+        
+        # Combine all FASTA files found
+        all_fasta_files = fna_files + fasta_files + fa_files
+        
         gff_files = list(subdir.glob("*.gff"))
         gtf_files = list(subdir.glob("*.gtf"))
         
-        if not fna_files:
+        if not all_fasta_files:
             print(f"[WARNING] Missing FASTA files in {subdir.name}")
             continue
         
@@ -101,7 +108,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
             print(f"[WARNING] Missing GFF or GTF annotation files in {subdir.name}")
             continue
         
-        fasta_path = fna_files[0]
+        fasta_path = all_fasta_files[0]
         gff_path = annotation_files[0]
         seq_dict = SeqIO.to_dict(SeqIO.parse(fasta_path, "fasta"))
         
