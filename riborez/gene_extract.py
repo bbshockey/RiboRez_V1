@@ -212,11 +212,16 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 strand = cols[6]
                 seq_record = seq_dict.get(chrom)
                 if not seq_record:
+                    if genes_found <= 3:
+                        print(f"[DEBUG] {subdir.name} gene {genes_found}: Chromosome '{chrom}' not found in FASTA")
                     continue
                 
                 sub_seq = seq_record.seq[start - 1:end]
                 if strand == "-":
                     sub_seq = sub_seq.reverse_complement()
+                
+                if genes_found <= 3:
+                    print(f"[DEBUG] {subdir.name} gene {genes_found}: Extracted sequence length {len(sub_seq)} from {chrom}:{start}-{end}")
                 
                 seq_length = len(sub_seq)
                 gene_lengths[gene_name].append(seq_length)
