@@ -77,11 +77,6 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
     temp_dir = output_dir / "temp"
     temp_dir.mkdir(parents=True, exist_ok=True)
     
-    # Dictionary to store sequence lengths by gene
-    gene_lengths = defaultdict(list)
-    gene_headers = defaultdict(list)
-    gene_sequences = defaultdict(list)
-    
     # Get all genome directories
     all_dirs = [d for d in data_root.iterdir() if d.is_dir()]
     
@@ -96,6 +91,11 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
     else:
         sampled_dirs = all_dirs
         print(f"[INFO] Processing all {len(all_dirs)} genomes")
+    
+    # Dictionary to store sequence lengths by gene (global across all genomes)
+    gene_lengths = defaultdict(list)
+    gene_headers = defaultdict(list)
+    gene_sequences = defaultdict(list)
     
     # Process genomes and extract genes
     processed_count = 0
@@ -229,6 +229,8 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 log.write(f"  {gene_name}: {full_header} (length: {seq_length})\n")
         
         print(f"[DEBUG] {subdir.name}: Found {genes_found} CDS/rRNA features, extracted {len(gene_headers)} unique genes")
+        print(f"[DEBUG] {subdir.name}: Gene names found: {list(gene_headers.keys())[:5]}...")  # Show first 5 gene names
+        print(f"[DEBUG] Total genes across all genomes so far: {sum(len(headers) for headers in gene_headers.values())}")
         processed_count += 1
     
     # Calculate median lengths and apply length filter
