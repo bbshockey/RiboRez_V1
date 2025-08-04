@@ -182,11 +182,11 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 id_field = (attr_dict.get("ID") or "").lower()
                 
                 # Assign unified names to rRNAs
-                if "16s" in product or "16s" in gene_field or "16s" in locus_tag or "16s" in id_field:
+                if "16s" in product or "16s" in gene_field or "16s" in locus_tag or "16s" in id_field or "16S ribosomal RNA" in attr_dict.get("product", ""):
                     gene_name = "16S"
-                elif "23s" in product or "23s" in gene_field or "23s" in locus_tag or "23s" in id_field:
+                elif "23s" in product or "23s" in gene_field or "23s" in locus_tag or "23s" in id_field or "23S ribosomal RNA" in attr_dict.get("product", ""):
                     gene_name = "23S"
-                elif "5s" in product or "5s" in gene_field or "5s" in locus_tag or "5s" in id_field:
+                elif "5s" in product or "5s" in gene_field or "5s" in locus_tag or "5s" in id_field or "5S ribosomal RNA" in attr_dict.get("product", ""):
                     gene_name = "5S"
                 else:
                     gene_name = (
