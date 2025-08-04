@@ -137,6 +137,22 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
         gff_path = annotation_files[0]
         seq_dict = SeqIO.to_dict(SeqIO.parse(fasta_path, "fasta"))
         
+        # Create chromosome name mapping for GFF files
+        # GFF uses assembly IDs like "assembly_750c07d9cdfd47c5_1"
+        # FASTA uses contig names like "ATCC_12022_contig_1" with assembly_id in description
+        chrom_mapping = {}
+        for seq_id, seq_record in seq_dict.items():
+            # Extract assembly_id from description
+            description = seq_record.description
+            if 'assembly_id=' in description:
+                assembly_id = description.split('assembly_id="')[1].split('"')[0]
+                gff_chrom_name = f"assembly_{assembly_id}_1"
+                chrom_mapping[gff_chrom_name] = seq_id
+                print(f"[DEBUG] {subdir.name}: Mapped GFF '{gff_chrom_name}' -> FASTA '{seq_id}'")
+        
+        # Debug: Show available chromosome names in FASTA
+        print(f"[DEBUG] {subdir.name}: FASTA chromosomes: {list(seq_dict.keys())[:3]}...")  # Show first 3
+        
         genes_found = 0
         with gff_path.open() as gff:
             for line in gff:
@@ -210,7 +226,16 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 chrom = cols[0]
                 start, end = int(cols[3]), int(cols[4])
                 strand = cols[6]
+                
+                # Try to find the sequence using chromosome mapping
                 seq_record = seq_dict.get(chrom)
+                if not seq_record and chrom in chrom_mapping:
+                    # Use the mapped chromosome name
+                    mapped_chrom = chrom_mapping[chrom]
+                    seq_record = seq_dict.get(mapped_chrom)
+                    if genes_found <= 3:
+                        print(f"[DEBUG] {subdir.name} gene {genes_found}: Mapped GFF '{chrom}' -> FASTA '{mapped_chrom}'")
+                
                 if not seq_record:
                     if genes_found <= 3:
                         print(f"[DEBUG] {subdir.name} gene {genes_found}: Chromosome '{chrom}' not found in FASTA")
