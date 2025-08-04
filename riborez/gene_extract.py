@@ -147,7 +147,10 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
             if 'assembly_id=' in description:
                 assembly_id = description.split('assembly_id="')[1].split('"')[0]
                 gff_chrom_name = f"assembly_{assembly_id}_1"
-                chrom_mapping[gff_chrom_name] = seq_id
+                # Store all contigs that map to this GFF chromosome
+                if gff_chrom_name not in chrom_mapping:
+                    chrom_mapping[gff_chrom_name] = []
+                chrom_mapping[gff_chrom_name].append(seq_id)
                 print(f"[DEBUG] {subdir.name}: Mapped GFF '{gff_chrom_name}' -> FASTA '{seq_id}'")
         
         # Debug: Show available chromosome names in FASTA
@@ -230,11 +233,15 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 # Try to find the sequence using chromosome mapping
                 seq_record = seq_dict.get(chrom)
                 if not seq_record and chrom in chrom_mapping:
-                    # Use the mapped chromosome name
-                    mapped_chrom = chrom_mapping[chrom]
-                    seq_record = seq_dict.get(mapped_chrom)
-                    if genes_found <= 3:
-                        print(f"[DEBUG] {subdir.name} gene {genes_found}: Mapped GFF '{chrom}' -> FASTA '{mapped_chrom}'")
+                    # Try each mapped contig to find the one containing this feature
+                    mapped_contigs = chrom_mapping[chrom]
+                    for mapped_chrom in mapped_contigs:
+                        potential_seq = seq_dict.get(mapped_chrom)
+                        if potential_seq and len(potential_seq.seq) >= end:
+                            seq_record = potential_seq
+                            if genes_found <= 3:
+                                print(f"[DEBUG] {subdir.name} gene {genes_found}: Mapped GFF '{chrom}' -> FASTA '{mapped_chrom}' (length: {len(potential_seq.seq)})")
+                            break
                 
                 if not seq_record:
                     if genes_found <= 3:
@@ -282,7 +289,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
         
         # Special length filter for 16S sequences
         if gene_name == "16S":
-            min_16s_length = 1400
+            min_16s_length = 1000  # Lowered from 1400 to 1000 bp for 16S
             log.write(f"{gene_name}: median={median_length}, threshold={threshold}, 16S_min_length={min_16s_length}\n")
         else:
             log.write(f"{gene_name}: median={median_length}, threshold={threshold}\n")
