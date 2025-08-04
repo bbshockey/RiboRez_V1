@@ -155,6 +155,10 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 
                 genes_found += 1
                 
+                # Debug: Show first few attributes for troubleshooting
+                if genes_found <= 3:
+                    print(f"[DEBUG] {subdir.name} feature {genes_found}: type={feature_type}, attrs={dict(list(attr_dict.items())[:3])}")
+                
                 # Extract and normalize annotation fields
                 product = attr_dict.get("product", "").lower()
                 gene_field = (attr_dict.get("gene") or "").lower()
@@ -175,6 +179,10 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                         attr_dict.get("ID") or
                         f"{feature_type}_{cols[0]}_{cols[3]}_{cols[4]}"
                     )
+                
+                # Debug: Show gene naming for first few features
+                if genes_found <= 3:
+                    print(f"[DEBUG] {subdir.name} gene {genes_found}: name='{gene_name}', product='{product}', gene='{gene_field}', locus='{locus_tag}'")
                 
                 # Filter by specific genes if requested
                 if genes:
