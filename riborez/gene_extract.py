@@ -259,7 +259,37 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 gene_lengths[gene_name].append(seq_length)
                 
                 strain_info = seq_record.description
-                full_header = f"{subdir.name}|{seq_record.id}|{start}-{end}|{strain_info}"
+                
+                # Create NCBI-like headers for better PMPrimer compatibility
+                if "GCF_" in subdir.name or "GCA_" in subdir.name:
+                    # NCBI genomes: keep original format
+                    full_header = f"{subdir.name}|{seq_record.id}|{start}-{end}|{strain_info}"
+                else:
+                    # ATCC genomes: create NCBI-like format
+                    # Extract species info from description
+                    species_info = ""
+                    if 'species=' in strain_info:
+                        species_info = strain_info.split('species="')[1].split('"')[0]
+                    elif 'complete genome' in strain_info:
+                        species_info = strain_info.split(', complete genome')[0].split(' ')[-2:]
+                        species_info = ' '.join(species_info)
+                    
+                    # Create NCBI-like header format
+                    # Format: GCF_XXXXX.X_StrainName|ContigID|start-end|Species description
+                    assembly_id = ""
+                    if 'assembly_id=' in strain_info:
+                        assembly_id = strain_info.split('assembly_id="')[1].split('"')[0]
+                    
+                    # Create a GCF-like identifier for ATCC genomes
+                    gcf_like = f"GCF_{assembly_id[:8]}.1_{subdir.name}"
+                    
+                    # Use contig ID as chromosome name
+                    chrom_name = seq_record.id
+                    
+                    # Create NCBI-like description
+                    ncbi_desc = f"{chrom_name} {species_info}, complete genome"
+                    
+                    full_header = f"{gcf_like}|{chrom_name}|{start}-{end}|{ncbi_desc}"
                 gene_headers[gene_name].append(full_header)
                 gene_sequences[gene_name].append(str(sub_seq))
                 
