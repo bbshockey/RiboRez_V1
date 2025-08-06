@@ -55,8 +55,9 @@ def process_subfolder(folder_path):
             with open(filtered_fasta, 'r') as f:
                 non_redundant_count = sum(1 for line in f if line.startswith('>'))
         
-        # Count successful amplifications and unique bacteria from amplicon CSV files
+        # Count successful amplifications and bacteria metrics from amplicon CSV files
         successful_amplifications = []
+        bacteria_amplified_counts = []
         unique_bacteria_counts = []
         for _, row in df.iterrows():
             primer_csv = row.get('PrimerPairCSV', '')
@@ -72,12 +73,13 @@ def process_subfolder(folder_path):
                             amp_count = max(0, line_count - 1)  # Subtract header row
                         successful_amplifications.append(amp_count)
                         
-                        # Count unique bacteria by parsing headers
+                        # Count bacteria amplified and unique bacteria by parsing amplicon data
+                        bacteria_amplified = 0
                         unique_bacteria = 0
                         try:
                             amplicon_df = pd.read_csv(amplicon_csv)
-                            if 'Header' in amplicon_df.columns:
-                                # Extract GCF identifiers from headers
+                            if 'Header' in amplicon_df.columns and 'AmpliconSequence' in amplicon_df.columns:
+                                # Count bacteria amplified (original logic)
                                 gcf_identifiers = set()
                                 for header in amplicon_df['Header']:
                                     if isinstance(header, str):
@@ -88,20 +90,51 @@ def process_subfolder(folder_path):
                                                 gcf_id = gcf_part.split('_')[:-1]  # Remove strain name
                                                 gcf_id = '_'.join(gcf_id)
                                                 gcf_identifiers.add(gcf_id)
-                                unique_bacteria = len(gcf_identifiers)
+                                bacteria_amplified = len(gcf_identifiers)
+                                
+                                # Count unique bacteria (sequences unique to one species only)
+                                sequence_to_gcf = {}  # Map sequence to set of GCF identifiers
+                                for idx, row_data in amplicon_df.iterrows():
+                                    if isinstance(row_data['AmpliconSequence'], str) and isinstance(row_data['Header'], str):
+                                        sequence = row_data['AmpliconSequence']
+                                        header = row_data['Header']
+                                        
+                                        # Extract GCF identifier
+                                        if 'GCF_' in header:
+                                            gcf_part = header.split('|')[0]  # Get first part before |
+                                            if '_' in gcf_part:
+                                                gcf_id = gcf_part.split('_')[:-1]  # Remove strain name
+                                                gcf_id = '_'.join(gcf_id)
+                                                
+                                                # Map sequence to GCF identifiers
+                                                if sequence not in sequence_to_gcf:
+                                                    sequence_to_gcf[sequence] = set()
+                                                sequence_to_gcf[sequence].add(gcf_id)
+                                
+                                # Count unique bacteria (sequences unique to one species)
+                                unique_gcf_identifiers = set()
+                                for sequence, gcf_set in sequence_to_gcf.items():
+                                    if len(gcf_set) == 1:  # Sequence is unique to one species
+                                        unique_gcf_identifiers.update(gcf_set)
+                                unique_bacteria = len(unique_gcf_identifiers)
                         except Exception as e:
-                            print(f"Warning: Could not parse unique bacteria for {primer_csv}: {e}")
+                            print(f"Warning: Could not parse bacteria metrics for {primer_csv}: {e}")
+                            bacteria_amplified = 0
                             unique_bacteria = 0
                         
+                        bacteria_amplified_counts.append(bacteria_amplified)
                         unique_bacteria_counts.append(unique_bacteria)
                     except:
                         successful_amplifications.append(0)
+                        bacteria_amplified_counts.append(0)
                         unique_bacteria_counts.append(0)
                 else:
                     successful_amplifications.append(0)
+                    bacteria_amplified_counts.append(0)
                     unique_bacteria_counts.append(0)
             else:
                 successful_amplifications.append(0)
+                bacteria_amplified_counts.append(0)
                 unique_bacteria_counts.append(0)
         
         # Remove problematic columns
@@ -114,7 +147,8 @@ def process_subfolder(folder_path):
         df.insert(1, 'Original#ofSequences', original_count)
         df.insert(2, 'nonRedundantOriginal#ofSequences', non_redundant_count)
         df.insert(3, 'SuccessfulAmplifications', successful_amplifications)
-        df.insert(4, 'UniqueBacteria', unique_bacteria_counts)
+        df.insert(4, 'BacteriaAmplified', bacteria_amplified_counts)
+        df.insert(5, 'UniqueBacteria', unique_bacteria_counts)
         
         return df
 

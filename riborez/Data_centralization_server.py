@@ -28,6 +28,7 @@ def extract_best_row(parent_folder):
                         
                         # Check if new columns exist, otherwise use fallback values
                         has_new_columns = all(col in df.columns for col in ["Original#ofSequences", "nonRedundantOriginal#ofSequences", "SuccessfulAmplifications"])
+                        has_bacteria_amplified = "BacteriaAmplified" in df.columns
                         has_unique_bacteria = "UniqueBacteria" in df.columns
                         has_old_columns = all(col in df.columns for col in ["NumInputSequences", "NumberOfUniqueBacteria"])
                         if has_new_columns:
@@ -37,6 +38,7 @@ def extract_best_row(parent_folder):
                                 "Original#ofSequences": best_row.get("Original#ofSequences", 0),
                                 "nonRedundantOriginal#ofSequences": best_row.get("nonRedundantOriginal#ofSequences", 0),
                                 "SuccessfulAmplifications": best_row.get("SuccessfulAmplifications", 0),
+                                "BacteriaAmplified": best_row.get("BacteriaAmplified", 0) if has_bacteria_amplified else 0,
                                 "UniqueBacteria": best_row.get("UniqueBacteria", 0) if has_unique_bacteria else 0,
                                 "NumUniqueASVs": best_row.get("NumUniqueASVs", 0),
                                 "MedianHammingDistance": best_row.get("MedianHammingDistance", 0),
@@ -50,6 +52,7 @@ def extract_best_row(parent_folder):
                                 "Original#ofSequences": best_row.get("NumInputSequences", 0),  # Use old column as fallback
                                 "nonRedundantOriginal#ofSequences": 0,  # Not available in old format
                                 "SuccessfulAmplifications": 0,  # Not available in old format
+                                "BacteriaAmplified": 0,  # Not available in old format
                                 "UniqueBacteria": 0,  # Not available in old format
                                 "NumUniqueASVs": best_row.get("NumUniqueASVs", 0),
                                 "MedianHammingDistance": best_row.get("MedianHammingDistance", 0),
@@ -63,6 +66,7 @@ def extract_best_row(parent_folder):
                                 "Original#ofSequences": 0,
                                 "nonRedundantOriginal#ofSequences": 0,
                                 "SuccessfulAmplifications": 0,
+                                "BacteriaAmplified": 0,
                                 "UniqueBacteria": 0,
                                 "NumUniqueASVs": best_row.get("NumUniqueASVs", 0),
                                 "MedianHammingDistance": best_row.get("MedianHammingDistance", 0),
