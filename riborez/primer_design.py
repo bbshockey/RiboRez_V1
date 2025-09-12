@@ -170,7 +170,15 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
             raise ValueError(error_msg)
             
     except subprocess.CalledProcessError as e:
-        log_message(f"Alignment failed for {filename}: {e.stderr}", log_file)
+        # Check if PMPrimer rejected all sequences due to header format issues
+        pmprimer_output = e.stdout + e.stderr if hasattr(e, 'stdout') else str(e)
+        if check_pmprimer_sequence_rejection(pmprimer_output):
+            error_msg = f"ERROR: PMPrimer rejected all sequences in {filename}. Your FASTA headers may be in the wrong format. Please see PMPrimer documentation for proper header formatting requirements."
+            log_message(error_msg, log_file)
+            print(f"\n{error_msg}")
+            raise ValueError(error_msg)
+        else:
+            log_message(f"Alignment failed for {filename}: {e.stderr}", log_file)
 
     # Check if alignment output exists, otherwise use original file
     mc_filt_filename = f"{gene_name}.filt.mc.fasta"
