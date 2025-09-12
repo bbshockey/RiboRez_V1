@@ -166,7 +166,14 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
         if check_pmprimer_sequence_rejection(pmprimer_output):
             error_msg = f"ERROR: PMPrimer rejected all sequences in {filename}. Your FASTA headers may be in the wrong format. Please see PMPrimer documentation for proper header formatting requirements."
             log_message(error_msg, log_file)
-            print(f"\n{error_msg}")
+            print(f"\n{'='*80}")
+            print(f"🚨 HEADER FORMAT ERROR 🚨")
+            print(f"{'='*80}")
+            print(f"❌ PMPrimer rejected ALL sequences in: {filename}")
+            print(f"📋 Issue: FASTA headers are not in the correct format")
+            print(f"📖 Solution: Please see PMPrimer documentation for proper header formatting")
+            print(f"💡 Tip: Headers should follow NCBI format: >lcl|identifier Genus species")
+            print(f"{'='*80}\n")
             raise ValueError(error_msg)
             
     except subprocess.CalledProcessError as e:
@@ -175,7 +182,14 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
         if check_pmprimer_sequence_rejection(pmprimer_output):
             error_msg = f"ERROR: PMPrimer rejected all sequences in {filename}. Your FASTA headers may be in the wrong format. Please see PMPrimer documentation for proper header formatting requirements."
             log_message(error_msg, log_file)
-            print(f"\n{error_msg}")
+            print(f"\n{'='*80}")
+            print(f"🚨 HEADER FORMAT ERROR 🚨")
+            print(f"{'='*80}")
+            print(f"❌ PMPrimer rejected ALL sequences in: {filename}")
+            print(f"📋 Issue: FASTA headers are not in the correct format")
+            print(f"📖 Solution: Please see PMPrimer documentation for proper header formatting")
+            print(f"💡 Tip: Headers should follow NCBI format: >lcl|identifier Genus species")
+            print(f"{'='*80}\n")
             raise ValueError(error_msg)
         else:
             log_message(f"Alignment failed for {filename}: {e.stderr}", log_file)
