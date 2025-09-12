@@ -28,6 +28,25 @@ def count_sequences(fasta_path):
         print(f"Error counting sequences in {fasta_path}: {str(e)}")
         return 0
 
+def check_pmprimer_sequence_rejection(pmprimer_output):
+    """Check if PMPrimer rejected all sequences due to header format issues."""
+    if not pmprimer_output:
+        return False
+    
+    # Look for signs that all sequences were rejected
+    rejection_patterns = [
+        "清洗后序列数为0",
+        "Number Of Sequences After Cleaning is 0",
+        "去重后序列集共 0 条",
+        "Number After Duplicate Remove is 0"
+    ]
+    
+    for pattern in rejection_patterns:
+        if pattern in pmprimer_output:
+            return True
+    
+    return False
+
 def create_reference_mapping(gene_dir, gene_name, reference_mapping_dir):
     """Create reference mapping for a gene."""
     try:
@@ -140,7 +159,16 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
     log_message(f"Running alignment for {filename}: {' '.join(alignment_cmd)}", log_file)
     
     try:
-        subprocess.run(alignment_cmd, check=True, cwd=gene_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(alignment_cmd, check=True, cwd=gene_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Check if PMPrimer rejected all sequences due to header format issues
+        pmprimer_output = result.stdout + result.stderr
+        if check_pmprimer_sequence_rejection(pmprimer_output):
+            error_msg = f"ERROR: PMPrimer rejected all sequences in {filename}. Your FASTA headers may be in the wrong format. Please see PMPrimer documentation for proper header formatting requirements."
+            log_message(error_msg, log_file)
+            print(f"\n{error_msg}")
+            raise ValueError(error_msg)
+            
     except subprocess.CalledProcessError as e:
         log_message(f"Alignment failed for {filename}: {e.stderr}", log_file)
 
