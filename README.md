@@ -2,7 +2,7 @@
 
 A tool for exploring mRNA transcripts for taxonomic resolution. 
 
-![RiboRez workflow overview](assets/riborez_cli_overview.png)
+![RiboRez workflow overview](assets/Riborez_workflow.png)
 
 ### Command Options
 
