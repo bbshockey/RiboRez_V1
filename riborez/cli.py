@@ -5,7 +5,7 @@ RiboRez Command Line Interface
 
 import argparse
 import sys
-from .download_taxa import download_taxa
+from .download_taxa import download_taxa, download_taxa_multi
 from .gene_extract import extract_genes
 from .primer_design import design_primers
 from .amplicon_analysis import analyze_amplicons
@@ -57,8 +57,7 @@ Examples:
     download_parser.add_argument(
         "--taxon-id", 
         required=True, 
-        type=int, 
-        help="NCBI Taxon ID"
+        help="NCBI Taxon ID or comma-separated list of IDs (e.g., 286,590)"
     )
     download_parser.add_argument(
         "--output-dir", 
@@ -208,16 +207,34 @@ Examples:
     # Execute commands
     try:
         if args.command == "download-taxa":
-            download_taxa(
-                taxon_name=args.taxon_name,
-                taxon_id=args.taxon_id,
-                output_dir=args.output_dir,
-                rehydrate=args.rehydrate,
-                force=args.force,
-                dry_run=args.dry_run,
-                max_genomes=args.max_genomes,
-                reference=args.reference
-            )
+            # Support single ID or comma-separated list
+            try:
+                taxon_ids = [int(x.strip()) for x in str(args.taxon_id).split(',') if x.strip()]
+            except ValueError:
+                raise ValueError("--taxon-id must be an integer or a comma-separated list of integers")
+
+            if len(taxon_ids) == 1:
+                download_taxa(
+                    taxon_name=args.taxon_name,
+                    taxon_id=taxon_ids[0],
+                    output_dir=args.output_dir,
+                    rehydrate=args.rehydrate,
+                    force=args.force,
+                    dry_run=args.dry_run,
+                    max_genomes=args.max_genomes,
+                    reference=args.reference
+                )
+            else:
+                download_taxa_multi(
+                    taxon_name=args.taxon_name,
+                    taxon_ids=taxon_ids,
+                    output_dir=args.output_dir,
+                    rehydrate=args.rehydrate,
+                    force=args.force,
+                    dry_run=args.dry_run,
+                    max_genomes=args.max_genomes,
+                    reference=args.reference
+                )
         elif args.command == "gene-extract":
             extract_genes(
                 taxon_name=args.taxon_name,
