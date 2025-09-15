@@ -2,6 +2,37 @@
 
 A tool for exploring mRNA transcripts for taxonomic resolution. 
 
+![RiboRez workflow overview](assests/riborez_cli_overview.png)
+
+### Command Options
+
+#### download-taxa
+- `--taxon-name`: Taxon name (used for output folder name) [required]
+- `--taxon-id`: NCBI Taxon ID [required]
+- `--output-dir`: Optional custom output directory
+- `--rehydrate`: Rehydrate datasets (default)
+- `--no-rehydrate`: Skip rehydration
+- `--force`: Overwrite output directory if it exists
+- `--dry-run`: Print commands without executing
+- `--max-genomes`: Maximum number of genomes to download (default: all available)
+- `--reference`: Restrict to reference genomes only (default: all RefSeq genomes)
+
+#### gene-extract
+- `--taxon-name`: Taxon name (used to locate downloaded data directory) [required]
+- `--genes`: Specific genes to extract (default: all genes). Examples: 16S, 23S, rRNA, gyrA, recA
+- `--data-root`: Path to data directory (auto-detected if not provided)
+- `--output-dir`: Output directory for extracted genes (auto-generated if not provided)
+- `--sample-size`: Number of genomes to sample (default: all available)
+- `--random-seed`: Random seed for sampling (default: 42)
+
+#### primer-design
+- `--input-folder`: Input folder containing FASTA files (e.g., output from gene-extract) [required]
+- `--output-folder`: Output directory for primer design results (auto-generated if not provided)
+- `--min-sequences`: Minimum number of sequences required per gene (default: 10)
+- `--threads`: Number of threads to use (default: 8)
+- `--run-amplicon-analysis`: Automatically run amplicon analysis on the output folder after primer design
+- `--faster`: Run only the alignment and primary PMPrimer commands, skipping the full parameter sweep. This significantly speeds up the process, but may reduce the diversity of primer candidates.
+
 ## PREREQUISITES
 
 ### Environment Setup
