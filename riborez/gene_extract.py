@@ -168,8 +168,15 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
                 attr_dict = parse_attributes(cols[8])
                 feature_type = cols[2]
                 
-                # Skip non-CDS and non-rRNA features
-                if feature_type not in ["CDS", "rRNA"]:
+                # Skip non-CDS and non-rRNA features, but include transcript if biotype indicates rRNA
+                is_rrna_transcript = (
+                    feature_type == "transcript" and (
+                        attr_dict.get("transcript_biotype") == "rRNA" or
+                        attr_dict.get("gbkey") == "rRNA"
+                    )
+                )
+                
+                if feature_type not in ["CDS", "rRNA"] and not is_rrna_transcript:
                     continue
                 
                 genes_found += 1
