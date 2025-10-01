@@ -123,6 +123,12 @@ Examples:
         help="Output directory for extracted genes (auto-generated if not provided)"
     )
     gene_extract_parser.add_argument(
+        "--min-per-gene",
+        type=int,
+        default=5,
+        help="Minimum sequences required to write a gene FASTA (default: 5)"
+    )
+    gene_extract_parser.add_argument(
         "--sample-size", 
         type=int, 
         help="Number of genomes to sample (default: all available)"
@@ -240,6 +246,7 @@ Examples:
                 taxon_name=args.taxon_name,
                 data_root=args.data_root,
                 output_dir=args.output_dir,
+                min_per_gene=args.min_per_gene,
                 sample_size=args.sample_size,
                 random_seed=args.random_seed,
                 genes=args.genes

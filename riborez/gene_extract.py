@@ -32,7 +32,7 @@ def parse_attributes(attr_str):
     
     return attrs
 
-def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None, random_seed=42, genes=None):
+def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, sample_size=None, random_seed=42, genes=None):
     """
     Extract genes from downloaded NCBI datasets.
     
@@ -350,14 +350,14 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
             else:
                 filtered_count += 1
         
-        if len(filtered_sequences) >= 5:
+        if len(filtered_sequences) >= min_per_gene:
             saved_gene_groups += 1
             with open(output_dir / f"{gene_name}.fasta", "w") as f:
                 for header, sequence in filtered_sequences:
                     f.write(f">{header} | {gene_name}\n{sequence}\n")
         else:
             small_gene_groups += 1
-            log.write(f"  Skipped creating file for {gene_name}: only {len(filtered_sequences)} sequences (< 5 required)\n")
+            log.write(f"  Skipped creating file for {gene_name}: only {len(filtered_sequences)} sequences (< {min_per_gene} required)\n")
     
     # Close log
     log.close()
@@ -367,8 +367,8 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, sample_size=None,
     print(f"[INFO] Processed {processed_count} genomes")
     print(f"[INFO] Total sequences: {total_count}")
     print(f"[INFO] Filtered out {filtered_count} sequences (< 50% of median length)")
-    print(f"[INFO] Skipped {small_gene_groups} gene groups with fewer than 5 sequences")
-    print(f"[INFO] Created {saved_gene_groups} gene FASTA files with 5+ sequences")
+    print(f"[INFO] Skipped {small_gene_groups} gene groups with fewer than {min_per_gene} sequences")
+    print(f"[INFO] Created {saved_gene_groups} gene FASTA files with {min_per_gene}+ sequences")
     print(f"[INFO] Output directory: {output_dir}")
     print(f"[INFO] Log file: {log_path}")
     
