@@ -352,7 +352,9 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
         
         if len(filtered_sequences) >= min_per_gene:
             saved_gene_groups += 1
-            with open(output_dir / f"{gene_name}.fasta", "w") as f:
+            # Sanitize gene name for filename (replace / with _)
+            safe_gene_name = gene_name.replace("/", "_")
+            with open(output_dir / f"{safe_gene_name}.fasta", "w") as f:
                 for header, sequence in filtered_sequences:
                     f.write(f">{header} | {gene_name}\n{sequence}\n")
         else:
