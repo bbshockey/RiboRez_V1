@@ -30,7 +30,8 @@ Step 4: amplicon-analysis  →  {taxon-name}_AmpliconAnalysis/
 - `--force`: Overwrite output directory if it exists
 - `--dry-run`: Print commands without executing
 - `--max-genomes`: Maximum number of genomes to download (default: all available)
-- `--reference`: Restrict to reference genomes only (default: all RefSeq genomes)
+- `--assembly-level`: Filter by assembly quality: `complete` (fully assembled, no gaps — recommended), `chromosome`, `scaffold`, or `contig`. Default: all levels.
+- `--reference`: Restrict to NCBI-designated reference genomes only (very small curated set, typically 1–5 per species). Use `--assembly-level complete` instead for a broader high-quality set.
 
 #### gene-extract
 - `--taxon-name`: Must match the name used in `download-taxa` — used to locate `{taxon-name}_NCBI/` [required]

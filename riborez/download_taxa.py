@@ -19,7 +19,7 @@ def run_command(cmd_list, dry_run):
     if not dry_run:
         subprocess.run(cmd_list, check=True)
 
-def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, max_genomes=None, reference=False):
+def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, max_genomes=None, reference=False, assembly_level=None):
     """
     Download and unpack NCBI genomes for a taxon.
     
@@ -80,6 +80,8 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, m
         ]
         if reference:
             summary_cmd.append("--reference")
+        if assembly_level:
+            summary_cmd += ["--assembly-level", assembly_level]
         
         # Run summary and pipe to dataformat
         if not dry_run:
@@ -126,6 +128,8 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, m
         ]
         if reference:
             download_cmd.append("--reference")
+        if assembly_level:
+            download_cmd += ["--assembly-level", assembly_level]
         run_command(download_cmd, dry_run)
 
     # Step 3: Unzip
@@ -138,7 +142,7 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, m
         run_command(rehydrate_cmd, dry_run) 
 
 
-def download_taxa_multi(taxon_name, taxon_ids, output_dir, rehydrate, force, dry_run, max_genomes=None, reference=False):
+def download_taxa_multi(taxon_name, taxon_ids, output_dir, rehydrate, force, dry_run, max_genomes=None, reference=False, assembly_level=None):
     """Download multiple taxon IDs into the same output directory.
 
     Each taxon ID is downloaded in sequence into the same zip and unzip locations.
@@ -191,6 +195,8 @@ def download_taxa_multi(taxon_name, taxon_ids, output_dir, rehydrate, force, dry
             ]
             if reference:
                 summary_cmd.append("--reference")
+            if assembly_level:
+                summary_cmd += ["--assembly-level", assembly_level]
 
             if not dry_run:
                 with open(accessions_file, 'w') as f:
@@ -229,6 +235,8 @@ def download_taxa_multi(taxon_name, taxon_ids, output_dir, rehydrate, force, dry
             ]
             if reference:
                 download_cmd.append("--reference")
+            if assembly_level:
+                download_cmd += ["--assembly-level", assembly_level]
             run_command(download_cmd, dry_run)
 
         # Unzip and rehydrate per batch

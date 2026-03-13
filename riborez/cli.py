@@ -94,7 +94,19 @@ Examples:
     download_parser.add_argument(
         "--reference",
         action="store_true",
-        help="Restrict to reference genomes only (default: all RefSeq genomes)"
+        help="Restrict to NCBI-designated reference genomes only (very few, highly curated). For broader high-quality filtering, use --assembly-level instead."
+    )
+    download_parser.add_argument(
+        "--assembly-level",
+        choices=["complete", "chromosome", "scaffold", "contig"],
+        help=(
+            "Filter by assembly quality level. "
+            "'complete' = fully assembled, no gaps (recommended for well-curated sets). "
+            "'chromosome' = assembled to chromosome level. "
+            "'scaffold' = scaffold-level assembly. "
+            "'contig' = raw contigs (lowest quality). "
+            "Default: all levels included."
+        )
     )
     
     # Gene-extract subcommand
@@ -233,7 +245,8 @@ Examples:
                     force=args.force,
                     dry_run=args.dry_run,
                     max_genomes=args.max_genomes,
-                    reference=args.reference
+                    reference=args.reference,
+                    assembly_level=args.assembly_level
                 )
             else:
                 download_taxa_multi(
@@ -244,7 +257,8 @@ Examples:
                     force=args.force,
                     dry_run=args.dry_run,
                     max_genomes=args.max_genomes,
-                    reference=args.reference
+                    reference=args.reference,
+                    assembly_level=args.assembly_level
                 )
         elif args.command == "gene-extract":
             extract_genes(
