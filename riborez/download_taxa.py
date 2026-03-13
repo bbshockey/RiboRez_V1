@@ -121,8 +121,11 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, m
             "datasets", "download", "genome", "taxon", str(taxon_id),
             "--dehydrated",
             "--include", "genome,gff3",
+            "--assembly-source", "RefSeq",
             "--filename", str(zip_path)
         ]
+        if reference:
+            download_cmd.append("--reference")
         run_command(download_cmd, dry_run)
 
     # Step 3: Unzip
@@ -221,8 +224,11 @@ def download_taxa_multi(taxon_name, taxon_ids, output_dir, rehydrate, force, dry
                 "datasets", "download", "genome", "taxon", str(taxon_id),
                 "--dehydrated",
                 "--include", "genome,gff3",
+                "--assembly-source", "RefSeq",
                 "--filename", str(zip_path)
             ]
+            if reference:
+                download_cmd.append("--reference")
             run_command(download_cmd, dry_run)
 
         # Unzip and rehydrate per batch
