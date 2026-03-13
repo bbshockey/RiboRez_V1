@@ -105,18 +105,23 @@ Examples:
     )
     
     gene_extract_parser.add_argument(
-        "--taxon-name", 
-        required=True, 
-        help="Taxon name (used to locate downloaded data directory)"
+        "--taxon-name",
+        required=True,
+        help="Must match the name used in download-taxa. Used to locate the downloaded data folder (e.g., 'Pseudomonas' looks for Pseudomonas_NCBI/). Use --data-root if you renamed the folder."
     )
     gene_extract_parser.add_argument(
-        "--genes", 
-        nargs="+", 
+        "--genes",
+        nargs="+",
         help="Specific genes to extract (default: all genes). Examples: 16S, 23S, rRNA, gyrA, recA"
     )
     gene_extract_parser.add_argument(
-        "--data-root", 
-        help="Path to data directory (auto-detected if not provided)"
+        "--data-root",
+        help=(
+            "Path to your genome data directory. "
+            "Supports NCBI dataset format (subdirectories per genome, each with FASTA+GFF) "
+            "or flat format (FASTA and GFF files placed directly in the directory, paired by matching filename stem). "
+            "Use this when you renamed the download folder or are working with your own genome files."
+        )
     )
     gene_extract_parser.add_argument(
         "--output-dir", 

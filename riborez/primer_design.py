@@ -271,7 +271,14 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
         raise FileNotFoundError(f"Input folder not found: {input_folder}")
     
     if output_folder is None:
-        output_folder = input_folder.parent / f"{input_folder.name}_Primers"
+        # Strip known gene-extract suffix so names don't cascade
+        # e.g., "Pseudomonas_AllGenesExtracted_rRNA" -> "Pseudomonas_Primers"
+        base_name = input_folder.name
+        for suffix in ("_AllGenesExtracted_rRNA", "_genes"):
+            if base_name.endswith(suffix):
+                base_name = base_name[: -len(suffix)]
+                break
+        output_folder = input_folder.parent / f"{base_name}_Primers"
     else:
         output_folder = Path(output_folder)
     
@@ -290,23 +297,29 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
     print(f"[INFO] Minimum sequences: {min_sequences}")
     print(f"[INFO] Threads: {threads}")
     
-    # Find FASTA files
-    fasta_files = [f for f in input_folder.iterdir() if f.suffix == ".fasta"]
+    # Find FASTA files (.fasta, .fna, .fa all accepted)
+    fasta_files = [f for f in input_folder.iterdir() if f.suffix in (".fasta", ".fna", ".fa")]
     log_message(f"Found {len(fasta_files)} FASTA files to process", log_file)
-    
+
     if not fasta_files:
-        raise ValueError(f"No FASTA files found in {input_folder}")
+        raise ValueError(
+            f"No FASTA files found in {input_folder}\n"
+            f"  Expected files with .fasta, .fna, or .fa extensions.\n"
+            f"  If your files have a different extension, rename them or use --input-folder to point to the correct directory."
+        )
     
     # Filter files by sequence count
     filtered_files = []
     skipped_count = 0
     for fasta_file in fasta_files:
-        if count_sequences(fasta_file) >= min_sequences:
+        seq_count = count_sequences(fasta_file)
+        if seq_count >= min_sequences:
             filtered_files.append(fasta_file)
         else:
             skipped_count += 1
-            if skipped_count % 100 == 0:
-                log_message(f"Skipped {skipped_count} files so far, latest: {fasta_file.name}", log_file)
+            gene_name = fasta_file.stem
+            print(f"[SKIP] {gene_name}: only {seq_count} sequences (min: {min_sequences}). Use --min-sequences to lower the threshold.")
+            log_message(f"Skipping {fasta_file.name}: only {seq_count} sequences (minimum: {min_sequences})", log_file)
     
     log_message(f"Pre-filtering complete: {skipped_count} skipped, {len(filtered_files)} to process", log_file)
     

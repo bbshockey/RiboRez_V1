@@ -134,7 +134,14 @@ def analyze_amplicons(input_folder, output_folder=None, threads=8):
         raise FileNotFoundError(f"Input folder not found: {input_folder}")
     
     if output_folder is None:
-        output_folder = input_folder.parent / f"{input_folder.name}_AmpliconAnalysis"
+        # Strip known primer-design suffix so names don't cascade
+        # e.g., "Pseudomonas_Primers" -> "Pseudomonas_AmpliconAnalysis"
+        base_name = input_folder.name
+        for suffix in ("_Primers",):
+            if base_name.endswith(suffix):
+                base_name = base_name[: -len(suffix)]
+                break
+        output_folder = input_folder.parent / f"{base_name}_AmpliconAnalysis"
     else:
         output_folder = Path(output_folder)
     

@@ -32,6 +32,54 @@ def parse_attributes(attr_str):
     
     return attrs
 
+_FASTA_EXTS = (".fna", ".fasta", ".fa")
+_GFF_EXTS = (".gff", ".gtf")
+
+
+def _collect_genome_entries(data_root):
+    """
+    Return a list of dicts {'id': str, 'fasta': Path, 'gff': Path} from data_root.
+
+    Supports two layouts automatically:
+      - NCBI dataset format: one subdirectory per genome, each containing FASTA + GFF
+      - Flat format: FASTA and GFF files placed directly inside data_root
+
+    For flat layout, FASTA files are paired with GFF files by matching stem name.
+    If no per-stem match exists but only one GFF is present, it is shared by all FASTAs.
+    """
+    # Flat layout: FASTA files live directly in data_root
+    direct_fastas = sorted(f for f in data_root.iterdir() if f.is_file() and f.suffix in _FASTA_EXTS)
+    if direct_fastas:
+        print(f"[INFO] Flat layout detected: {len(direct_fastas)} FASTA file(s) found directly in {data_root}")
+        all_gffs = [f for f in data_root.iterdir() if f.is_file() and f.suffix in _GFF_EXTS]
+        gff_by_stem = {f.stem: f for f in all_gffs}
+        entries = []
+        for fasta in direct_fastas:
+            gff = gff_by_stem.get(fasta.stem)
+            if gff is None and len(all_gffs) == 1:
+                gff = all_gffs[0]  # single GFF shared by all FASTAs
+            if gff is None:
+                print(f"[WARNING] No matching GFF/GTF for {fasta.name} — skipping. "
+                      f"Name your annotation file '{fasta.stem}.gff' to pair it automatically.")
+                continue
+            entries.append({"id": fasta.stem, "fasta": fasta, "gff": gff})
+        return entries
+
+    # NCBI dataset layout: one subdirectory per genome
+    subdirs = sorted(d for d in data_root.iterdir() if d.is_dir())
+    entries = []
+    for subdir in subdirs:
+        fastas = sorted(f for f in subdir.iterdir() if f.is_file() and f.suffix in _FASTA_EXTS)
+        gffs = sorted(f for f in subdir.iterdir() if f.is_file() and f.suffix in _GFF_EXTS)
+        if fastas and gffs:
+            entries.append({"id": subdir.name, "fasta": fastas[0], "gff": gffs[0]})
+        elif fastas and not gffs:
+            print(f"[WARNING] No GFF/GTF found in {subdir.name} — skipping")
+        elif gffs and not fastas:
+            print(f"[WARNING] No FASTA found in {subdir.name} — skipping")
+    return entries
+
+
 def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, sample_size=None, random_seed=42, genes=None):
     """
     Extract genes from downloaded NCBI datasets.
@@ -51,7 +99,14 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
         data_root = Path(data_root)
     
     if not data_root.exists():
-        raise FileNotFoundError(f"Data directory not found: {data_root}")
+        expected_ncbi_dir = Path.cwd() / f"{taxon_name}_NCBI"
+        raise FileNotFoundError(
+            f"Data directory not found: {data_root}\n"
+            f"  '--taxon-name {taxon_name}' expects the downloaded data at:\n"
+            f"    {expected_ncbi_dir}/\n"
+            f"  If you renamed that folder or are using your own genome data, pass its path with:\n"
+            f"    --data-root /path/to/genomes/ncbi_dataset/data"
+        )
     
     # Auto-generate output directory if not provided
     if output_dir is None:
@@ -77,64 +132,41 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
     temp_dir = output_dir / "temp"
     temp_dir.mkdir(parents=True, exist_ok=True)
     
-    # Get all genome directories
-    all_dirs = [d for d in data_root.iterdir() if d.is_dir()]
-    
-    if not all_dirs:
-        raise ValueError(f"No genome directories found in {data_root}")
-    
+    # Collect genome entries (supports both NCBI dataset layout and flat layout)
+    all_entries = _collect_genome_entries(data_root)
+
+    if not all_entries:
+        raise ValueError(
+            f"No genome data found in {data_root}\n"
+            f"  For NCBI dataset format: expected subdirectories each containing a FASTA and GFF file.\n"
+            f"  For flat format: place your .fna/.fasta/.fa and .gff/.gtf files directly in this directory."
+        )
+
     # Sample genomes if requested
-    if sample_size and sample_size < len(all_dirs):
+    if sample_size and sample_size < len(all_entries):
         random.seed(random_seed)
-        sampled_dirs = random.sample(all_dirs, sample_size)
-        print(f"[INFO] Sampling {sample_size} genomes from {len(all_dirs)} available")
+        genome_entries = random.sample(all_entries, sample_size)
+        print(f"[INFO] Sampling {sample_size} genomes from {len(all_entries)} available")
     else:
-        sampled_dirs = all_dirs
-        print(f"[INFO] Processing all {len(all_dirs)} genomes")
-    
+        genome_entries = all_entries
+        print(f"[INFO] Processing all {len(all_entries)} genomes")
+
     # Dictionary to store sequence lengths by gene (global across all genomes)
     gene_lengths = defaultdict(list)
     gene_headers = defaultdict(list)
     gene_sequences = defaultdict(list)
-    
+
     # Process genomes and extract genes
     processed_count = 0
-    for subdir in sampled_dirs:
-        print(f"[INFO] Processing: {subdir.name}")
-        log.write(f"\n[{subdir.name}]\n")
-        
-        # Look for FASTA files with various extensions
-        fna_files = list(subdir.glob("*.fna"))
-        fasta_files = list(subdir.glob("*.fasta"))
-        fa_files = list(subdir.glob("*.fa"))
-        
-        # Combine all FASTA files found
-        all_fasta_files = fna_files + fasta_files + fa_files
-        
-        gff_files = list(subdir.glob("*.gff"))
-        gtf_files = list(subdir.glob("*.gtf"))
-        
-        # Debug output
-        print(f"[DEBUG] {subdir.name}: Found {len(all_fasta_files)} FASTA files, {len(gff_files)} GFF files, {len(gtf_files)} GTF files")
-        if all_fasta_files:
-            print(f"[DEBUG] FASTA files: {[f.name for f in all_fasta_files]}")
-        if gff_files:
-            print(f"[DEBUG] GFF files: {[f.name for f in gff_files]}")
-        if gtf_files:
-            print(f"[DEBUG] GTF files: {[f.name for f in gtf_files]}")
-        
-        if not all_fasta_files:
-            print(f"[WARNING] Missing FASTA files in {subdir.name}")
-            continue
-        
-        # Use GFF if available, otherwise use GTF
-        annotation_files = gff_files + gtf_files
-        if not annotation_files:
-            print(f"[WARNING] Missing GFF or GTF annotation files in {subdir.name}")
-            continue
-        
-        fasta_path = all_fasta_files[0]
-        gff_path = annotation_files[0]
+    for entry in genome_entries:
+        genome_id = entry["id"]
+        fasta_path = entry["fasta"]
+        gff_path = entry["gff"]
+
+        print(f"[INFO] Processing: {genome_id}")
+        log.write(f"\n[{genome_id}]\n")
+        print(f"[DEBUG] {genome_id}: FASTA={fasta_path.name}, GFF={gff_path.name}")
+
         seq_dict = SeqIO.to_dict(SeqIO.parse(fasta_path, "fasta"))
         
         # Create chromosome name mapping for GFF files
@@ -151,10 +183,10 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                 if gff_chrom_name not in chrom_mapping:
                     chrom_mapping[gff_chrom_name] = []
                 chrom_mapping[gff_chrom_name].append(seq_id)
-                print(f"[DEBUG] {subdir.name}: Mapped GFF '{gff_chrom_name}' -> FASTA '{seq_id}'")
+                print(f"[DEBUG] {genome_id}: Mapped GFF '{gff_chrom_name}' -> FASTA '{seq_id}'")
         
         # Debug: Show available chromosome names in FASTA
-        print(f"[DEBUG] {subdir.name}: FASTA chromosomes: {list(seq_dict.keys())[:3]}...")  # Show first 3
+        print(f"[DEBUG] {genome_id}: FASTA chromosomes: {list(seq_dict.keys())[:3]}...")  # Show first 3
         
         genes_found = 0
         with gff_path.open() as gff:
@@ -183,7 +215,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                 
                 # Debug: Show first few attributes for troubleshooting
                 if genes_found <= 3:
-                    print(f"[DEBUG] {subdir.name} feature {genes_found}: type={feature_type}, attrs={dict(list(attr_dict.items())[:3])}")
+                    print(f"[DEBUG] {genome_id} feature {genes_found}: type={feature_type}, attrs={dict(list(attr_dict.items())[:3])}")
                 
                 # Extract and normalize annotation fields
                 product = attr_dict.get("product", "").lower()
@@ -192,12 +224,19 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                 id_field = (attr_dict.get("ID") or "").lower()
                 
                 # Assign unified names to rRNAs
+                raw_name = attr_dict.get("gene") or attr_dict.get("product") or attr_dict.get("locus_tag") or attr_dict.get("ID") or ""
                 if "16s" in product or "16s" in gene_field or "16s" in locus_tag or "16s" in id_field or "16S ribosomal RNA" in attr_dict.get("product", ""):
                     gene_name = "16S"
+                    if raw_name.lower() not in ["16s", "16s ribosomal rna"]:
+                        print(f"[INFO] Normalized '{raw_name}' -> '16S'")
                 elif "23s" in product or "23s" in gene_field or "23s" in locus_tag or "23s" in id_field or "23S ribosomal RNA" in attr_dict.get("product", ""):
                     gene_name = "23S"
+                    if raw_name.lower() not in ["23s", "23s ribosomal rna"]:
+                        print(f"[INFO] Normalized '{raw_name}' -> '23S'")
                 elif "5s" in product or "5s" in gene_field or "5s" in locus_tag or "5s" in id_field or "5S ribosomal RNA" in attr_dict.get("product", ""):
                     gene_name = "5S"
+                    if raw_name.lower() not in ["5s", "5s ribosomal rna"]:
+                        print(f"[INFO] Normalized '{raw_name}' -> '5S'")
                 else:
                     gene_name = (
                         attr_dict.get("gene") or
@@ -208,7 +247,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                 
                 # Debug: Show gene naming for first few features
                 if genes_found <= 3:
-                    print(f"[DEBUG] {subdir.name} gene {genes_found}: name='{gene_name}', product='{product}', gene='{gene_field}', locus='{locus_tag}'")
+                    print(f"[DEBUG] {genome_id} gene {genes_found}: name='{gene_name}', product='{product}', gene='{gene_field}', locus='{locus_tag}'")
                 
                 # Filter by specific genes if requested
                 if genes:
@@ -247,12 +286,12 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                         if potential_seq and len(potential_seq.seq) >= end:
                             seq_record = potential_seq
                             if genes_found <= 3:
-                                print(f"[DEBUG] {subdir.name} gene {genes_found}: Mapped GFF '{chrom}' -> FASTA '{mapped_chrom}' (length: {len(potential_seq.seq)})")
+                                print(f"[DEBUG] {genome_id} gene {genes_found}: Mapped GFF '{chrom}' -> FASTA '{mapped_chrom}' (length: {len(potential_seq.seq)})")
                             break
                 
                 if not seq_record:
                     if genes_found <= 3:
-                        print(f"[DEBUG] {subdir.name} gene {genes_found}: Chromosome '{chrom}' not found in FASTA")
+                        print(f"[DEBUG] {genome_id} gene {genes_found}: Chromosome '{chrom}' not found in FASTA")
                     continue
                 
                 sub_seq = seq_record.seq[start - 1:end]
@@ -260,7 +299,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                     sub_seq = sub_seq.reverse_complement()
                 
                 if genes_found <= 3:
-                    print(f"[DEBUG] {subdir.name} gene {genes_found}: Extracted sequence length {len(sub_seq)} from {chrom}:{start}-{end}")
+                    print(f"[DEBUG] {genome_id} gene {genes_found}: Extracted sequence length {len(sub_seq)} from {chrom}:{start}-{end}")
                 
                 seq_length = len(sub_seq)
                 gene_lengths[gene_name].append(seq_length)
@@ -268,11 +307,11 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                 strain_info = seq_record.description
                 
                 # Create NCBI-like headers for better PMPrimer compatibility
-                if "GCF_" in subdir.name or "GCA_" in subdir.name:
+                if "GCF_" in genome_id or "GCA_" in genome_id:
                     # NCBI genomes: keep original format
-                    full_header = f"{subdir.name}|{seq_record.id}|{start}-{end}|{strain_info}"
+                    full_header = f"{genome_id}|{seq_record.id}|{start}-{end}|{strain_info}"
                 else:
-                    # ATCC genomes: create NCBI-like format
+                    # Non-NCBI genomes: create NCBI-like format
                     # Extract species info from description
                     species_info = ""
                     if 'species=' in strain_info:
@@ -280,30 +319,25 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                     elif 'complete genome' in strain_info:
                         species_info = strain_info.split(', complete genome')[0].split(' ')[-2:]
                         species_info = ' '.join(species_info)
-                    
+
                     # Create NCBI-like header format
                     # Format: GCF_XXXXX.X_StrainName|ContigID|start-end|Species description
                     assembly_id = ""
                     if 'assembly_id=' in strain_info:
                         assembly_id = strain_info.split('assembly_id="')[1].split('"')[0]
-                    
-                    # Create a GCF-like identifier for ATCC genomes
-                    gcf_like = f"GCF_{assembly_id[:8]}.1_{subdir.name}"
-                    
-                    # Use contig ID as chromosome name
+
+                    gcf_like = f"GCF_{assembly_id[:8]}.1_{genome_id}" if assembly_id else genome_id
                     chrom_name = seq_record.id
-                    
-                    # Create NCBI-like description
                     ncbi_desc = f"{chrom_name} {species_info}, complete genome"
-                    
+
                     full_header = f"{gcf_like}|{chrom_name}|{start}-{end}|{ncbi_desc}"
                 gene_headers[gene_name].append(full_header)
                 gene_sequences[gene_name].append(str(sub_seq))
                 
                 log.write(f"  {gene_name}: {full_header} (length: {seq_length})\n")
         
-        print(f"[DEBUG] {subdir.name}: Found {genes_found} CDS/rRNA features, extracted {len(gene_headers)} unique genes")
-        print(f"[DEBUG] {subdir.name}: Gene names found: {list(gene_headers.keys())[:5]}...")  # Show first 5 gene names
+        print(f"[DEBUG] {genome_id}: Found {genes_found} CDS/rRNA features, extracted {len(gene_headers)} unique genes")
+        print(f"[DEBUG] {genome_id}: Gene names found: {list(gene_headers.keys())[:5]}...")  # Show first 5 gene names
         print(f"[DEBUG] Total genes across all genomes so far: {sum(len(headers) for headers in gene_headers.values())}")
         processed_count += 1
     
@@ -359,6 +393,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                     f.write(f">{header} | {gene_name}\n{sequence}\n")
         else:
             small_gene_groups += 1
+            print(f"[SKIP] {gene_name}: only {len(filtered_sequences)} sequences after filtering (min: {min_per_gene}). Increase --min-per-gene to include it.")
             log.write(f"  Skipped creating file for {gene_name}: only {len(filtered_sequences)} sequences (< {min_per_gene} required)\n")
     
     # Close log
