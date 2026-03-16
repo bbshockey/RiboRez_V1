@@ -110,7 +110,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
     
     # Auto-generate output directory if not provided
     if output_dir is None:
-        output_dir = Path.cwd() / f"{taxon_name}_AllGenesExtracted_rRNA"
+        output_dir = Path.cwd() / f"{taxon_name}_RNAextracted"
     else:
         output_dir = Path(output_dir)
     

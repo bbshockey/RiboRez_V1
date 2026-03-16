@@ -10,7 +10,7 @@ RiboRez is a four-step pipeline. Each step produces output that feeds directly i
 
 ```
 Step 1: download-taxa  →  {taxon-name}_NCBI/
-Step 2: gene-extract   →  {taxon-name}_AllGenesExtracted_rRNA/
+Step 2: gene-extract   →  {taxon-name}_RNAextracted/
 Step 3: primer-design  →  {taxon-name}_Primers/
 Step 4: amplicon-analysis  →  {taxon-name}_AmpliconAnalysis/
 ```
@@ -39,7 +39,7 @@ Step 4: amplicon-analysis  →  {taxon-name}_AmpliconAnalysis/
 - `--data-root`: Manually specify the path to your genome data directory. Supports two layouts:
   - **NCBI dataset format** (default from `download-taxa`): a directory of subdirectories, each containing a FASTA + GFF file
   - **Flat format**: FASTA and GFF files placed directly in the directory. Files are paired by matching stem name (e.g., `genome1.fna` + `genome1.gff`). If only one GFF is present it is shared by all FASTAs.
-- `--output-dir`: Output directory for extracted genes (auto-generated as `{taxon-name}_AllGenesExtracted_rRNA/` if not provided)
+- `--output-dir`: Output directory for extracted genes (auto-generated as `{taxon-name}_RNAextracted/` if not provided)
 - `--min-per-gene`: Minimum number of sequences required to write a gene FASTA file (default: 5). Genes below this threshold are skipped with a warning.
 - `--sample-size`: Number of genomes to sample (default: all available)
 - `--random-seed`: Random seed for sampling (default: 42)
@@ -66,10 +66,10 @@ riborez download-taxa --taxon-name Pseudomonas --taxon-id 286
 # 2. Extract specific genes (e.g., 16S rRNA)
 #    --taxon-name must match step 1 so the folder is found automatically
 riborez gene-extract --taxon-name Pseudomonas --genes 16S
-# Output: Pseudomonas_AllGenesExtracted_rRNA/16S.fasta
+# Output: Pseudomonas_RNAextracted/16S.fasta
 
 # 3. Design primers AND analyze amplicons in one step
-riborez primer-design --input-folder Pseudomonas_AllGenesExtracted_rRNA --run-amplicon-analysis
+riborez primer-design --input-folder Pseudomonas_RNAextracted --run-amplicon-analysis
 # Output: Pseudomonas_Primers/ and Pseudomonas_AmpliconAnalysis/
 ```
 

@@ -28,10 +28,10 @@ Examples:
   riborez gene-extract --taxon-name Pseudomonas --genes 16S 23S
   riborez gene-extract --taxon-name Ecoli --genes rRNA
   riborez gene-extract --taxon-name Bacillus --genes gyrA recA
-  riborez primer-design --input-folder Pseudomonas_AllGenesExtracted_rRNA
-  riborez primer-design --input-folder Ecoli_genes --min-sequences 20 --threads 4
-  riborez primer-design --input-folder Pseudomonas_genes --run-amplicon-analysis
-  riborez amplicon-analysis --input-folder Pseudomonas_AllGenesExtracted_rRNA_Primers
+  riborez primer-design --input-folder Pseudomonas_RNAextracted
+  riborez primer-design --input-folder Ecoli_RNAextracted --min-sequences 20 --threads 4
+  riborez primer-design --input-folder Pseudomonas_RNAextracted --run-amplicon-analysis
+  riborez amplicon-analysis --input-folder Pseudomonas_Primers
   riborez amplicon-analysis --input-folder Ecoli_Primers --output-folder my_analysis --threads 8
         """
     )

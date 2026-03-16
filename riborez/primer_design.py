@@ -272,9 +272,9 @@ def design_primers(input_folder, output_folder=None, min_sequences=10, threads=8
     
     if output_folder is None:
         # Strip known gene-extract suffix so names don't cascade
-        # e.g., "Pseudomonas_AllGenesExtracted_rRNA" -> "Pseudomonas_Primers"
+        # e.g., "Pseudomonas_RNAextracted" -> "Pseudomonas_Primers"
         base_name = input_folder.name
-        for suffix in ("_AllGenesExtracted_rRNA", "_genes"):
+        for suffix in ("_RNAextracted", "_AllGenesExtracted_rRNA", "_genes"):
             if base_name.endswith(suffix):
                 base_name = base_name[: -len(suffix)]
                 break
