@@ -25,17 +25,21 @@ def run_amplification_analysis(input_dir, log_file):
     This corresponds to Post_alignjson_many_working_Server.py functionality.
     """
     try:
-        # Find the best JSON file (most amplicons ≤ 500 bp)
-        all_files = os.listdir(input_dir)
-        candidate_jsons = []
-        
-        for f in all_files:
-            if f.endswith(".json"):
-                stem = f.replace(".json", "")
-                csv_file = stem + ".csv"
-                csv_path = os.path.join(input_dir, csv_file)
-                if os.path.exists(csv_path):
-                    candidate_jsons.append((f, csv_file))
+        # Files may be directly in the gene folder, or inside pmprimer_outputs/
+        # (the latter happens when primer-design has already run organize_pmprimer_outputs)
+        pmprimer_subdir = os.path.join(input_dir, "pmprimer_outputs")
+        search_dirs = [input_dir]
+        if os.path.isdir(pmprimer_subdir):
+            search_dirs.append(pmprimer_subdir)
+
+        candidate_jsons = []  # list of (json_path, csv_path)
+        for search_dir in search_dirs:
+            for f in os.listdir(search_dir):
+                if f.endswith(".json"):
+                    stem = f.replace(".json", "")
+                    csv_path = os.path.join(search_dir, stem + ".csv")
+                    if os.path.exists(csv_path):
+                        candidate_jsons.append((os.path.join(search_dir, f), csv_path))
 
         if not candidate_jsons:
             log_message(f"No valid JSON/CSV pairs found in {input_dir}", log_file)
@@ -45,9 +49,8 @@ def run_amplification_analysis(input_dir, log_file):
         best_json = None
         max_amplicons = -1
 
-        for json_file, csv_file in candidate_jsons:
+        for json_path, csv_path in candidate_jsons:
             try:
-                csv_path = os.path.join(input_dir, csv_file)
                 df = pd.read_csv(csv_path)
                 df.columns = [col.strip() for col in df.columns]
 
@@ -61,12 +64,19 @@ def run_amplification_analysis(input_dir, log_file):
                 count = df[col].apply(pd.to_numeric, errors='coerce').dropna().le(500).sum()
                 if count > max_amplicons:
                     max_amplicons = count
-                    best_json = os.path.join(input_dir, json_file)
+                    best_json = json_path
             except Exception as e:
-                log_message(f"Failed to read {csv_file}: {e}", log_file)
+                log_message(f"Failed to read {os.path.basename(csv_path)}: {e}", log_file)
 
-        # Find FASTA file
-        fasta_file = next((os.path.join(input_dir, f) for f in all_files if f.endswith(".filt.mc.fasta")), None)
+        # Find FASTA file — search same directories
+        fasta_file = None
+        for search_dir in search_dirs:
+            for f in os.listdir(search_dir):
+                if f.endswith(".filt.mc.fasta"):
+                    fasta_file = os.path.join(search_dir, f)
+                    break
+            if fasta_file:
+                break
         
         if not best_json or not fasta_file:
             log_message(f"Skipping {os.path.basename(input_dir)}: no valid json or fasta found", log_file)
