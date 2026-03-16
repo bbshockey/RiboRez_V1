@@ -75,29 +75,38 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, m
             "datasets", "summary", "genome", "taxon", str(taxon_id),
             "--limit", str(max_genomes),
             "--assembly-source", "RefSeq",
-            "--report", "ids_only",
             "--as-json-lines"
         ]
         if reference:
             summary_cmd.append("--reference")
         if assembly_level:
             summary_cmd += ["--assembly-level", assembly_level]
-        
-        # Run summary and pipe to dataformat
+
+        # Run summary and pipe to dataformat to extract accessions
         if not dry_run:
             with open(accessions_file, 'w') as f:
                 subprocess.run(summary_cmd, stdout=f, check=True)
-            
-            # Convert to TSV format
+
+            # Convert full JSON-lines report to TSV and extract accession column
             dataformat_cmd = ["dataformat", "tsv", "genome", "--fields", "accession"]
             with open(accessions_file, 'r') as infile, open(accessions_clean_file, 'w') as outfile:
                 subprocess.run(dataformat_cmd, stdin=infile, stdout=outfile, check=True)
-            
-            # Remove header line (tail -n +2 equivalent)
+
+            # Remove header line produced by dataformat
             with open(accessions_clean_file, 'r') as f:
                 lines = f.readlines()
+            accession_lines = [l for l in lines[1:] if l.strip()]
             with open(accessions_clean_file, 'w') as f:
-                f.writelines(lines[1:])  # Skip first line (header)
+                f.writelines(accession_lines)
+
+            if not accession_lines:
+                raise ValueError(
+                    f"No genomes found for taxon {taxon_id} with the specified filters.\n"
+                    f"  Filters used: --assembly-source RefSeq"
+                    + (f", --assembly-level {assembly_level}" if assembly_level else "")
+                    + (", --reference" if reference else "") + "\n"
+                    f"  Try relaxing the filters (e.g., remove --assembly-level or use 'chromosome' instead of 'complete')."
+                )
         else:
             print(f"[CMD] {' '.join(summary_cmd)} | dataformat tsv genome --fields accession > {accessions_file}")
             print(f"[CMD] tail -n +2 {accessions_file} > {accessions_clean_file}")
@@ -190,7 +199,6 @@ def download_taxa_multi(taxon_name, taxon_ids, output_dir, rehydrate, force, dry
                 "datasets", "summary", "genome", "taxon", str(taxon_id),
                 "--limit", str(max_genomes),
                 "--assembly-source", "RefSeq",
-                "--report", "ids_only",
                 "--as-json-lines"
             ]
             if reference:
@@ -206,8 +214,18 @@ def download_taxa_multi(taxon_name, taxon_ids, output_dir, rehydrate, force, dry
                     subprocess.run(dataformat_cmd, stdin=infile, stdout=outfile, check=True)
                 with open(accessions_clean_file, 'r') as f:
                     lines = f.readlines()
+                accession_lines = [l for l in lines[1:] if l.strip()]
                 with open(accessions_clean_file, 'w') as f:
-                    f.writelines(lines[1:])
+                    f.writelines(accession_lines)
+
+                if not accession_lines:
+                    raise ValueError(
+                        f"No genomes found for taxon {taxon_id} with the specified filters.\n"
+                        f"  Filters used: --assembly-source RefSeq"
+                        + (f", --assembly-level {assembly_level}" if assembly_level else "")
+                        + (", --reference" if reference else "") + "\n"
+                        f"  Try relaxing the filters (e.g., remove --assembly-level or use 'chromosome' instead of 'complete')."
+                    )
             else:
                 print(f"[CMD] {' '.join(summary_cmd)} | dataformat tsv genome --fields accession > {accessions_file}")
                 print(f"[CMD] tail -n +2 {accessions_file} > {accessions_clean_file}")
