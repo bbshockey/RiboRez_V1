@@ -49,8 +49,13 @@ Step 4: amplicon-analysis  →  {taxon-name}_AmpliconAnalysis/
 - `--output-folder`: Output directory for primer design results (auto-generated as `{taxon-name}_Primers/` if not provided)
 - `--min-sequences`: Minimum number of sequences required per gene to run primer design (default: 10). Genes below this threshold are skipped with a warning.
 - `--threads`: Number of threads to use (default: 8)
-- `--run-amplicon-analysis`: Automatically run amplicon analysis on the output folder after primer design
-- `--faster`: Run only the alignment and primary PMPrimer commands, skipping the full parameter sweep. This significantly speeds up the process, but may reduce the diversity of primer candidates.
+- `--run-amplicon-analysis`: Automatically run amplicon analysis on the output folder after primer design completes
+- `--faster`: Run only the alignment and primary PMPrimer commands, skipping the full parameter sweep. Significantly speeds up the process, but may reduce the diversity of primer candidates.
+
+#### amplicon-analysis
+- `--input-folder`: Input folder containing primer design results (output from `primer-design`) [required]
+- `--output-folder`: Output directory for analysis results (auto-generated as `{taxon-name}_AmpliconAnalysis/` if not provided)
+- `--threads`: Number of threads to use (default: 8)
 
 ---
 
