@@ -57,11 +57,60 @@ Step 4: amplicon-analysis  →  {taxon-name}_AmpliconAnalysis/
 - `--output-folder`: Output directory for analysis results (auto-generated as `{taxon-name}_AmpliconAnalysis/` if not provided)
 - `--threads`: Number of threads to use (default: 8)
 
+#### run *(full pipeline)*
+Runs all four steps in sequence. Output folders are auto-named using `--taxon-name`.
+- `--taxon-name`: Taxon name for all output folders [required]
+- `--taxon-id`: NCBI Taxon ID or comma-separated list [required]
+- `--max-genomes`: Maximum genomes to download (default: all)
+- `--assembly-level`: Filter downloads by quality: `complete`, `chromosome`, `scaffold`, or `contig`
+- `--reference`: Restrict to NCBI reference genomes only
+- `--force`: Overwrite existing download folder
+- `--genes`: Genes to extract (default: all). Examples: `16S 23S`, `rRNA`, `gyrA recA`
+- `--min-per-gene`: Minimum sequences to write a gene FASTA (default: 5)
+- `--sample-size`: Number of genomes to sample for extraction (default: all)
+- `--min-sequences`: Minimum sequences per gene for primer design (default: 10)
+- `--faster`: Skip full PMPrimer parameter sweep (faster, fewer primer candidates)
+- `--threads`: Threads for primer design and amplicon analysis (default: 8)
+- `--skip-download`: Skip download-taxa (use existing `{taxon-name}_NCBI/`)
+- `--skip-extract`: Skip gene-extract (use existing `{taxon-name}_RNAextracted/`)
+- `--skip-primer-design`: Skip primer-design (use existing `{taxon-name}_Primers/`)
+
 ---
 
 ## COMPLETE WORKFLOW EXAMPLE
 
-Here's a complete example showing a typical workflow: downloading all available *Pseudomonas* genomes from NCBI, extracting all 16S rRNA genes, then running primer design and amplicon analysis.
+### Option A — One command (recommended)
+
+Run the entire pipeline with a single `run` command:
+
+```bash
+riborez run \
+  --taxon-name Pseudomonas \
+  --taxon-id 286 \
+  --genes 16S 23S \
+  --assembly-level complete \
+  --threads 22 \
+  --faster
+```
+
+Output folders are created automatically:
+```
+Pseudomonas_NCBI/               ← downloaded genomes
+Pseudomonas_RNAextracted/       ← extracted gene FASTAs
+Pseudomonas_Primers/            ← primer design results
+Pseudomonas_AmpliconAnalysis/   ← final amplicon analysis
+```
+
+**Re-running from a later step** — use skip flags to jump past steps you've already done:
+```bash
+# Re-run primer design + amplicon analysis only (download and extract already done)
+riborez run --taxon-name Pseudomonas --taxon-id 286 --genes 16S 23S \
+  --skip-download --skip-extract --threads 22 --faster
+```
+
+---
+
+### Option B — Step by step
 
 ```bash
 # 1. Download genomes for a taxon
