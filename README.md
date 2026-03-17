@@ -57,6 +57,25 @@ Step 4: amplicon-analysis  →  {taxon-name}_AmpliconAnalysis/
 - `--output-folder`: Output directory for analysis results (auto-generated as `{taxon-name}_AmpliconAnalysis/` if not provided)
 - `--threads`: Number of threads to use (default: 8)
 
+#### ribozyme-design
+Designs group-I-intron ribozymes paired with primer pairs from `primer-design`. Runs on a **single gene directory**. For combined ranking, `amplicon-analysis` must have been run first.
+- `--input-folder`: Single gene directory (e.g., `Pseudomonas_Primers/16S/`) [required]
+- `--output-folder`: Output directory (auto-named `{gene}_RibozymeDesign/` next to input folder)
+- `--window`: bp to extend T-site search beyond reverse primer region (default: `10`)
+- `--egs-start`: EGS region start offset from T-site (default: `11`)
+- `--egs-end`: EGS region end offset from T-site (default: `60`)
+- `--p1-loop`: Fixed P1 loop sequence (default: `TAACCACA`)
+- `--max-amplicon-length`: Discard combined ranking candidates with amplicon ≥ this bp (default: `500`)
+- `--max-igs-mismatches`: Discard candidates where total IGS mismatches exceed this value (default: no filter)
+
+**Ranking within each primer pair** (best T-site first): T conservation (required) → IGS mismatch sum → P1 extension mismatch sum → EGS mismatch sum
+
+**Combined ranking across primer pairs**: NumUniqueASVs ↓ → MedianHammingDistance ↓ → IGS mismatch sum ↑ → EGS mismatch sum ↑
+
+**Outputs:**
+- `{gene}_ribozyme_designs.tsv` — all T-sites per primer pair
+- `{gene}_combined_ranked.tsv` — final ranked candidates (requires amplicon-analysis output)
+
 #### run *(full pipeline)*
 Runs all four steps in sequence. Output folders are auto-named using `--taxon-name`.
 - `--taxon-name`: Taxon name for all output folders [required]

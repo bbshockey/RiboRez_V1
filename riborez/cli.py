@@ -9,6 +9,7 @@ from .download_taxa import download_taxa, download_taxa_multi
 from .gene_extract import extract_genes
 from .primer_design import design_primers
 from .amplicon_analysis import analyze_amplicons
+from .ribozyme_design import design_ribozymes
 
 def main():
     """Main entry point for the riborez command."""
@@ -36,6 +37,8 @@ Examples:
   riborez run --taxon-name Pseudomonas --taxon-id 286 --genes 16S 23S --threads 22
   riborez run --taxon-name Ecoli --taxon-id 562 --genes rRNA --max-genomes 200 --assembly-level complete --threads 22 --faster
   riborez run --taxon-name Pseudomonas --taxon-id 286 --skip-download --genes 16S --threads 22
+  riborez ribozyme-design --input-folder Pseudomonas_Primers/16S
+  riborez ribozyme-design --input-folder Pseudomonas_Primers/acnB --max-igs-mismatches 10
         """
     )
     
@@ -222,6 +225,65 @@ Examples:
         help="Number of threads to use (default: 8)"
     )
 
+    # Ribozyme-design subcommand
+    ribozyme_parser = subparsers.add_parser(
+        "ribozyme-design",
+        help="Design group-I-intron ribozymes paired with primer pairs",
+        description=(
+            "Find group-I-intron T-sites near each reverse primer in a gene directory, "
+            "score IGS/EGS conservation, and produce a combined ranking of primer pairs "
+            "that maximize both taxonomic resolution and ribozyme cleavage reliability.\n\n"
+            "Requires 'riborez primer-design' output. For combined ranking, also requires "
+            "'riborez amplicon-analysis' output (amplicon.summary.csv or *_processed_amplicon.csv)."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    ribozyme_parser.add_argument(
+        "--input-folder",
+        required=True,
+        help="Single gene directory from primer-design output (e.g., Pseudomonas_Primers/16S/)"
+    )
+    ribozyme_parser.add_argument(
+        "--output-folder",
+        help="Output directory (auto-named {gene}_RibozymeDesign/ next to input folder if not provided)"
+    )
+    ribozyme_parser.add_argument(
+        "--window",
+        type=int,
+        default=10,
+        help="bp to extend T-site search beyond reverse primer region (default: 10)"
+    )
+    ribozyme_parser.add_argument(
+        "--egs-start",
+        type=int,
+        default=11,
+        help="EGS region start offset from T-site (default: 11)"
+    )
+    ribozyme_parser.add_argument(
+        "--egs-end",
+        type=int,
+        default=60,
+        help="EGS region end offset from T-site (default: 60)"
+    )
+    ribozyme_parser.add_argument(
+        "--p1-loop",
+        default="TAACCACA",
+        help="Fixed P1 loop sequence (default: TAACCACA)"
+    )
+    ribozyme_parser.add_argument(
+        "--max-amplicon-length",
+        type=int,
+        default=500,
+        help="Discard combined ranking candidates with amplicon >= this bp (default: 500)"
+    )
+    ribozyme_parser.add_argument(
+        "--max-igs-mismatches",
+        type=int,
+        default=None,
+        help="Discard candidates where total IGS mismatches across all sequences exceeds this (default: no filter)"
+    )
+
     # Run (full pipeline) subcommand
     run_parser = subparsers.add_parser(
         "run",
@@ -389,6 +451,17 @@ Examples:
                 input_folder=args.input_folder,
                 output_folder=args.output_folder,
                 threads=args.threads
+            )
+        elif args.command == "ribozyme-design":
+            design_ribozymes(
+                input_folder=args.input_folder,
+                output_folder=args.output_folder,
+                window=args.window,
+                egs_start=args.egs_start,
+                egs_end=args.egs_end,
+                p1_loop=args.p1_loop,
+                max_amplicon_length=args.max_amplicon_length,
+                max_igs_mismatches=args.max_igs_mismatches,
             )
         elif args.command == "run":
             try:
