@@ -155,6 +155,9 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
     gene_lengths = defaultdict(list)
     gene_headers = defaultdict(list)
     gene_sequences = defaultdict(list)
+    # Track (chrom, start, end) per gene to avoid extracting both rRNA and
+    # transcript features when both annotate the same locus in the same GFF
+    seen_coords = defaultdict(set)
 
     # Process genomes and extract genes
     processed_count = 0
@@ -275,7 +278,15 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                 chrom = cols[0]
                 start, end = int(cols[3]), int(cols[4])
                 strand = cols[6]
-                
+
+                # Skip if we already extracted a feature at this exact location
+                # for this gene (prevents double-counting rRNA + transcript features
+                # that annotate the same locus in the same GFF)
+                coord_key = (chrom, start, end)
+                if coord_key in seen_coords[gene_name]:
+                    continue
+                seen_coords[gene_name].add(coord_key)
+
                 # Try to find the sequence using chromosome mapping
                 seq_record = seq_dict.get(chrom)
                 if not seq_record and chrom in chrom_mapping:

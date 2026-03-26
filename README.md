@@ -67,6 +67,7 @@ Designs group-I-intron ribozymes paired with primer pairs from `primer-design`. 
 - `--p1-loop`: Fixed P1 loop sequence (default: `TAACCACA`)
 - `--max-amplicon-length`: Discard combined ranking candidates with amplicon ≥ this bp (default: `500`)
 - `--max-igs-mismatches`: Discard candidates where total IGS mismatches exceed this value (default: no filter)
+- `--min-t-conservation`: Minimum fraction of sequences that must have T at the cleavage site (0.0–1.0, default: `1.0` = 100%). Useful for large gene pools where no position is perfectly conserved. Example: `0.9` allows up to 10% non-T sequences at the T-site.
 
 **Ranking within each primer pair** (best T-site first): T conservation (required) → IGS mismatch sum → P1 extension mismatch sum → EGS mismatch sum
 

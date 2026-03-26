@@ -283,6 +283,17 @@ Examples:
         default=None,
         help="Discard candidates where total IGS mismatches across all sequences exceeds this (default: no filter)"
     )
+    ribozyme_parser.add_argument(
+        "--min-t-conservation",
+        type=float,
+        default=1.0,
+        help=(
+            "Minimum fraction of sequences that must have T at the cleavage site "
+            "(0.0–1.0, default: 1.0 = 100%%). "
+            "Useful for large gene pools where no position is perfectly conserved. "
+            "Example: 0.9 allows up to 10%% non-T sequences at the T-site."
+        )
+    )
 
     # Run (full pipeline) subcommand
     run_parser = subparsers.add_parser(
@@ -462,6 +473,7 @@ Examples:
                 p1_loop=args.p1_loop,
                 max_amplicon_length=args.max_amplicon_length,
                 max_igs_mismatches=args.max_igs_mismatches,
+                min_t_conservation=args.min_t_conservation,
             )
         elif args.command == "run":
             try:

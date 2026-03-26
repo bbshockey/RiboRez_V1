@@ -156,12 +156,14 @@ def _score_egs(seq_list, T_pos, aln_len, egs_start, egs_end):
 # ── T-site search ─────────────────────────────────────────────────────────────
 
 def _find_t_sites(seq_list, names, aln_len, window_start, window_end,
-                  egs_start, egs_end):
+                  egs_start, egs_end, min_t_conservation=1.0):
     """
     Scan alignment columns in [window_start, window_end] for valid T-sites.
 
     A position is a valid T-site if:
-      1. Every non-gap character at that column is 'T' (hard filter — T is most important).
+      1. The fraction of non-gap characters equal to 'T' >= min_t_conservation.
+         Default 1.0 = 100% (all sequences must have T). Lower values (e.g. 0.9)
+         allow a small proportion of non-T sequences, useful for large datasets.
       2. There are at least 5 upstream columns available for the IGS.
       3. The EGS region fits within the alignment.
 
@@ -184,7 +186,10 @@ def _find_t_sites(seq_list, names, aln_len, window_start, window_end,
         if T_pos + egs_start >= aln_len:
             continue
         t_chars = [s[T_pos] for s in seq_list if s[T_pos] != "-"]
-        if not t_chars or not all(c == "T" for c in t_chars):
+        if not t_chars:
+            continue
+        t_fraction = sum(1 for c in t_chars if c == "T") / len(t_chars)
+        if t_fraction < min_t_conservation:
             continue
 
         igs_mm_cols, igs_per_seq, igs_per_seq_sum, mm_seqs = _score_igs(
@@ -196,6 +201,7 @@ def _find_t_sites(seq_list, names, aln_len, window_start, window_end,
         )
         candidates.append({
             "aln_pos": T_pos + 1,
+            "t_conservation": round(t_fraction, 4),
             "igs": _consensus_str(seq_list, T_pos - 5, 5, aln_len),
             "p1_ext": _consensus_str(seq_list, T_pos + 1, 3, aln_len),
             "igs_mm_cols": igs_mm_cols,
@@ -363,7 +369,7 @@ def _match_json_to_amplicon_csv(json_csv_pairs, amplicon_csv_path):
 
 _DESIGNS_FIELDS = [
     "amplicon_id", "fwd_primer", "rev_primer",
-    "rev_region", "t_site_rank", "aln_pos",
+    "rev_region", "t_site_rank", "aln_pos", "t_conservation",
     "igs", "T", "p1_ext", "p1_loop",
     "igs_mm_cols", "igs_per_seq_sum", "n_igs_mismatch_seqs",
     "per_seq_igs", "igs_mismatch_seqs",
@@ -389,7 +395,8 @@ _RIBO_OUT_FIELDS = [
 # ── Core steps ────────────────────────────────────────────────────────────────
 
 def _run_t_site_search(fasta_path, json_path, output_tsv,
-                       window, egs_start, egs_end, p1_loop, log_file):
+                       window, egs_start, egs_end, p1_loop, log_file,
+                       min_t_conservation=1.0):
     """Write ribozyme_designs.tsv — one row per (primer_pair, T-site)."""
     names, seqs = _read_fasta(fasta_path)
     seq_list = [seqs[n] for n in names]
@@ -411,7 +418,8 @@ def _run_t_site_search(fasta_path, json_path, output_tsv,
             win_lo = max(0, rstart - window)
             win_hi = min(aln_len - 1, rend + window)
             candidates = _find_t_sites(
-                seq_list, names, aln_len, win_lo, win_hi, egs_start, egs_end
+                seq_list, names, aln_len, win_lo, win_hi, egs_start, egs_end,
+                min_t_conservation=min_t_conservation,
             )
             if not candidates:
                 continue
@@ -554,7 +562,8 @@ def _run_combined_ranking(amplicon_csv, ribozyme_tsv, output_tsv,
 
 def design_ribozymes(input_folder, output_folder=None, window=10,
                      egs_start=11, egs_end=60, p1_loop="TAACCACA",
-                     max_amplicon_length=500, max_igs_mismatches=None):
+                     max_amplicon_length=500, max_igs_mismatches=None,
+                     min_t_conservation=1.0):
     """
     Design group-I-intron ribozymes paired with RiboRez primer pairs.
 
@@ -567,6 +576,8 @@ def design_ribozymes(input_folder, output_folder=None, window=10,
         p1_loop           : P1 loop sequence (default TAACCACA)
         max_amplicon_length : Discard candidates with amplicon >= this bp (default 500)
         max_igs_mismatches  : Discard where igs_per_seq_sum > this (default: no filter)
+        min_t_conservation  : Minimum fraction of sequences with T at cleavage site
+                              (0.0–1.0, default 1.0 = 100% required)
 
     Returns:
         Path to the output folder.
@@ -597,6 +608,7 @@ def design_ribozymes(input_folder, output_folder=None, window=10,
     print(f"[INFO] T-site window: reverse primer ±{window} bp")
     print(f"[INFO] EGS window: T+{egs_start} to T+{egs_end}")
     print(f"[INFO] Max amplicon length: {max_amplicon_length} bp")
+    print(f"[INFO] Min T-site conservation: {min_t_conservation:.0%}")
     if max_igs_mismatches is not None:
         print(f"[INFO] Max IGS mismatches filter: {max_igs_mismatches}")
 
@@ -646,6 +658,7 @@ def design_ribozymes(input_folder, output_folder=None, window=10,
         egs_end=egs_end,
         p1_loop=p1_loop.upper(),
         log_file=log_file,
+        min_t_conservation=min_t_conservation,
     )
 
     if total_sites == 0:
