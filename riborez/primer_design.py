@@ -225,10 +225,14 @@ def run_pmprimer_in_subdir(fasta_path, output_folder, reference_mapping_dir, min
         current_mc_filt = mc_filt_filename if os.path.exists(os.path.join(gene_dir, mc_filt_filename)) else filename
         additional_cmds = [
             ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.3", "gaps:90", "tm:35", "minlen:15", "maxlen:800", "merge", "primer2", "-e", "hpcnt:1000", "minlen:50", "save", "-d", "2"],
-            ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.3", "gaps:50", "tm:30", "primer2", "-e", "hpcnt:2000", "maxlen:2000", "save", "-d", "2"],
+            ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.3", "gaps:50", "tm:30", "primer2", "-e", "hpcnt:2000", "minlen:50", "maxlen:2000", "save", "-d", "2"],
             ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.2", "merge", "primer2", "-e", "hpcnt:3000", "save"],
             ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.3", "minlen:5", "merge", "primer2", "-e", "save"],
-            ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.99", "gaps:100", "merge", "primer2", "tm:45", "-e", "hpcnt:600", "save"]
+            ["pmprimer", "-f", current_mc_filt, "-a", "threshold:0.99", "gaps:100", "merge", "primer2", "tm:45", "-e", "hpcnt:600", "save"],
+            # Wide-bounds commands: catch amplicons missed by length filters above
+            # (handles inflated alignments from transcript-feature extraction, e.g. 16S)
+            ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.5", "gaps:30", "tm:35", "primer2", "-e", "hpcnt:1000", "minlen:50", "maxlen:3000", "save"],
+            ["pmprimer", "-f", current_mc_filt, "-p", "default", "-a", "threshold:0.5", "gaps:50", "tm:30", "primer2", "-e", "hpcnt:2000", "minlen:50", "maxlen:3000", "save"]
         ]
         for cmd in additional_cmds:
             try:
