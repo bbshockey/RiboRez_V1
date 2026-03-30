@@ -35,7 +35,7 @@ def process_subfolder(folder_path):
         return cell
 
 
-    df = df.applymap(replace_rep)
+    df = df.map(replace_rep)
 
     # Update sequence counts and restructure columns
     def update_counts_and_restructure(df, gene_name, folder_path):
