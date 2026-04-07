@@ -92,6 +92,11 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
         random_seed (int): Random seed for sampling
         genes (list): List of specific genes to extract (None for all genes)
     """
+    # Normalize genes list: split any comma-separated values so both
+    # "--genes 16S acnB" and "--genes 16S,acnB" work identically
+    if genes:
+        genes = [g.strip() for entry in genes for g in entry.split(",") if g.strip()]
+
     # Auto-detect data root if not provided
     if data_root is None:
         data_root = Path.cwd() / f"{taxon_name}_NCBI" / "genomes" / "ncbi_dataset" / "data"

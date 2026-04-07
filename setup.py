@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="riborez",
-    version="1.10.0",
+    version="1.10.1",
     author="Bjorn Shockey",
     author_email="bs128@rice.edu",
     description="A tool for ribosomal analysis and data management",
