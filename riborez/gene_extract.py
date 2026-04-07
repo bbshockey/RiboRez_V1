@@ -230,15 +230,15 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                 raw_name = attr_dict.get("gene") or attr_dict.get("product") or attr_dict.get("locus_tag") or attr_dict.get("ID") or ""
                 if "16s" in product or "16s" in gene_field or "16s" in locus_tag or "16s" in id_field or "16S ribosomal RNA" in attr_dict.get("product", ""):
                     gene_name = "16S"
-                    if raw_name.lower() not in ["16s", "16s ribosomal rna"]:
+                    if not genes and raw_name.lower() not in ["16s", "16s ribosomal rna"]:
                         print(f"[INFO] Normalized '{raw_name}' -> '16S'")
                 elif "23s" in product or "23s" in gene_field or "23s" in locus_tag or "23s" in id_field or "23S ribosomal RNA" in attr_dict.get("product", ""):
                     gene_name = "23S"
-                    if raw_name.lower() not in ["23s", "23s ribosomal rna"]:
+                    if not genes and raw_name.lower() not in ["23s", "23s ribosomal rna"]:
                         print(f"[INFO] Normalized '{raw_name}' -> '23S'")
                 elif "5s" in product or "5s" in gene_field or "5s" in locus_tag or "5s" in id_field or "5S ribosomal RNA" in attr_dict.get("product", ""):
                     gene_name = "5S"
-                    if raw_name.lower() not in ["5s", "5s ribosomal rna"]:
+                    if not genes and raw_name.lower() not in ["5s", "5s ribosomal rna"]:
                         print(f"[INFO] Normalized '{raw_name}' -> '5S'")
                 else:
                     gene_name = (
