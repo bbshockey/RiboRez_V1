@@ -365,6 +365,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
     total_count = 0
     small_gene_groups = 0
     saved_gene_groups = 0
+    gene_seq_counts = {}  # gene_name -> final sequence count written
     
     for gene_name, lengths in gene_lengths.items():
         if len(lengths) < 1:
@@ -402,6 +403,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
         
         if len(filtered_sequences) >= min_per_gene:
             saved_gene_groups += 1
+            gene_seq_counts[gene_name] = len(filtered_sequences)
             # Sanitize gene name for filename (replace / with _)
             safe_gene_name = gene_name.replace("/", "_")
             with open(output_dir / f"{safe_gene_name}.fasta", "w") as f:
@@ -418,10 +420,12 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
     # Print summary
     print(f"[SUCCESS] Gene extraction completed!")
     print(f"[INFO] Processed {processed_count} genomes")
-    print(f"[INFO] Total sequences: {total_count}")
+    print(f"[INFO] Sequences extracted per gene:")
+    for gname, count in sorted(gene_seq_counts.items()):
+        print(f"         {gname}: {count}")
     print(f"[INFO] Filtered out {filtered_count} sequences (< 50% of median length)")
-    print(f"[INFO] Skipped {small_gene_groups} gene groups with fewer than {min_per_gene} sequences")
-    print(f"[INFO] Created {saved_gene_groups} gene FASTA files with {min_per_gene}+ sequences")
+    if small_gene_groups:
+        print(f"[INFO] Skipped {small_gene_groups} gene groups with fewer than {min_per_gene} sequences")
     print(f"[INFO] Output directory: {output_dir}")
     print(f"[INFO] Log file: {log_path}")
     
