@@ -365,7 +365,8 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
     total_count = 0
     small_gene_groups = 0
     saved_gene_groups = 0
-    gene_seq_counts = {}  # gene_name -> final sequence count written
+    gene_seq_counts = {}   # gene_name -> final sequence count written
+    gene_filtered_counts = {}  # gene_name -> sequences removed by length filter
     
     for gene_name, lengths in gene_lengths.items():
         if len(lengths) < 1:
@@ -400,6 +401,7 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
                 filtered_sequences.append((gene_headers[gene_name][i], gene_sequences[gene_name][i]))
             else:
                 filtered_count += 1
+                gene_filtered_counts[gene_name] = gene_filtered_counts.get(gene_name, 0) + 1
         
         if len(filtered_sequences) >= min_per_gene:
             saved_gene_groups += 1
@@ -421,9 +423,14 @@ def extract_genes(taxon_name, data_root=None, output_dir=None, min_per_gene=5, s
     print(f"[SUCCESS] Gene extraction completed!")
     print(f"[INFO] Processed {processed_count} genomes")
     print(f"[INFO] Sequences extracted per gene:")
-    for gname, count in sorted(gene_seq_counts.items()):
-        print(f"         {gname}: {count}")
-    print(f"[INFO] Filtered out {filtered_count} sequences (< 50% of median length)")
+    all_genes = sorted(set(list(gene_seq_counts.keys()) + list(gene_filtered_counts.keys())))
+    for gname in all_genes:
+        kept = gene_seq_counts.get(gname, 0)
+        removed = gene_filtered_counts.get(gname, 0)
+        if removed:
+            print(f"         {gname}: {kept} kept, {removed} filtered by length")
+        else:
+            print(f"         {gname}: {kept}")
     if small_gene_groups:
         print(f"[INFO] Skipped {small_gene_groups} gene groups with fewer than {min_per_gene} sequences")
     print(f"[INFO] Output directory: {output_dir}")
