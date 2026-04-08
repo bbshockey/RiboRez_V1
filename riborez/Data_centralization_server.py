@@ -28,6 +28,7 @@ def extract_best_row(parent_folder):
                         
                         # Check if new columns exist, otherwise use fallback values
                         has_new_columns = all(col in df.columns for col in ["Original#ofSequences", "nonRedundantOriginal#ofSequences", "SequencesSuccessfullyAmplified"])
+                        has_input_genomes = "InputGenomes" in df.columns
                         has_bacteria_amplified = "BacteriaAmplified" in df.columns
                         has_bacteria_amplified_under = "BacteriaAmplified(undercounted)" in df.columns
                         has_unique_bacteria = "UniqueBacteria" in df.columns
@@ -37,6 +38,7 @@ def extract_best_row(parent_folder):
                             output_row = {
                                 "Filename": file,
                                 "PrimerPairCSV": best_row.get("PrimerPairCSV", ""),
+                                "InputGenomes": best_row.get("InputGenomes", 0) if has_input_genomes else 0,
                                 "Original#ofSequences": best_row.get("Original#ofSequences", 0),
                                 "nonRedundantOriginal#ofSequences": best_row.get("nonRedundantOriginal#ofSequences", 0),
                                 "SequencesSuccessfullyAmplified": best_row.get("SequencesSuccessfullyAmplified", 0),
@@ -53,6 +55,7 @@ def extract_best_row(parent_folder):
                             output_row = {
                                 "Filename": file,
                                 "PrimerPairCSV": best_row.get("PrimerPairCSV", ""),
+                                "InputGenomes": 0,
                                 "Original#ofSequences": best_row.get("NumInputSequences", 0),
                                 "nonRedundantOriginal#ofSequences": 0,
                                 "SequencesSuccessfullyAmplified": 0,
@@ -69,6 +72,7 @@ def extract_best_row(parent_folder):
                             output_row = {
                                 "Filename": file,
                                 "PrimerPairCSV": best_row.get("PrimerPairCSV", ""),
+                                "InputGenomes": 0,
                                 "Original#ofSequences": 0,
                                 "nonRedundantOriginal#ofSequences": 0,
                                 "SequencesSuccessfullyAmplified": 0,

@@ -52,11 +52,19 @@ def process_subfolder(folder_path):
         original_fasta = os.path.join(folder_path, f"{gene_name}.fasta")
         filtered_fasta = os.path.join(folder_path, f"{gene_name}.filt.fasta")
 
-        # Count sequences in original FASTA
+        # Count sequences and unique input genomes from original FASTA
         original_count = 0
+        input_genomes_count = 0
         if os.path.exists(original_fasta):
+            input_gcf_ids = set()
             with open(original_fasta, 'r') as f:
-                original_count = sum(1 for line in f if line.startswith('>'))
+                for line in f:
+                    if line.startswith('>'):
+                        original_count += 1
+                        gcf = extract_gcf_id(line[1:].strip())
+                        if gcf:
+                            input_gcf_ids.add(gcf)
+            input_genomes_count = len(input_gcf_ids)
 
         # Count sequences in filtered FASTA
         non_redundant_count = 0
@@ -187,13 +195,14 @@ def process_subfolder(folder_path):
                 df = df.drop(columns=[col])
 
         # Insert new columns after PrimerPairCSV (index 0)
-        df.insert(1, 'Original#ofSequences', original_count)
-        df.insert(2, 'nonRedundantOriginal#ofSequences', non_redundant_count)
-        df.insert(3, 'SequencesSuccessfullyAmplified', successful_amplifications)
-        df.insert(4, 'BacteriaAmplified(undercounted)', bacteria_amplified_undercounted)
-        df.insert(5, 'BacteriaAmplified', bacteria_amplified_corrected)
-        df.insert(6, 'UniqueBacteria(undercounted)', unique_bacteria_undercounted)
-        df.insert(7, 'UniqueBacteria', unique_bacteria_corrected)
+        df.insert(1, 'InputGenomes', input_genomes_count)
+        df.insert(2, 'Original#ofSequences', original_count)
+        df.insert(3, 'nonRedundantOriginal#ofSequences', non_redundant_count)
+        df.insert(4, 'SequencesSuccessfullyAmplified', successful_amplifications)
+        df.insert(5, 'BacteriaAmplified(undercounted)', bacteria_amplified_undercounted)
+        df.insert(6, 'BacteriaAmplified', bacteria_amplified_corrected)
+        df.insert(7, 'UniqueBacteria(undercounted)', unique_bacteria_undercounted)
+        df.insert(8, 'UniqueBacteria', unique_bacteria_corrected)
 
         return df
 
