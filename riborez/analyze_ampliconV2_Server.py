@@ -3,38 +3,24 @@ import os
 import csv
 import glob
 import statistics
-import subprocess
-import tempfile
 import sys
-from Bio import SeqIO
-
-def check_muscle(muscle_path):
-    """Check if MUSCLE is installed and executable."""
-    if not os.path.exists(muscle_path) or not os.access(muscle_path, os.X_OK):
-        raise FileNotFoundError(f"MUSCLE not found or not executable: {muscle_path}")
-
-def align_sequences_muscle(input_fasta, output_fasta, muscle_path):
-    """Align sequences using MUSCLE and save as FASTA using proven command-line options."""
-    check_muscle(muscle_path)
-    command = [muscle_path, "-align", input_fasta, "-output", output_fasta]
-    try:
-        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print(f"Alignment saved to {output_fasta}")
-    except subprocess.CalledProcessError as e:
-        print(f"Error running MUSCLE: {e.stderr.decode()}")
-        raise
 
 def hamming_distance(s1, s2):
-    if len(s1) != len(s2):
-        raise ValueError("Sequences must be equal length")
+    """Hamming distance between two strings.
+    If lengths differ, the shorter is right-padded with '-' (gap) characters,
+    treating missing positions as mismatches."""
+    max_len = max(len(s1), len(s2))
+    s1 = s1.ljust(max_len, '-')
+    s2 = s2.ljust(max_len, '-')
     return sum(ch1 != ch2 for ch1, ch2 in zip(s1, s2))
 
-def analyze_csv(file_path, muscle_exe=None):
+def analyze_csv(file_path):
     rows = []
     with open(file_path, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            rows.append((row["Header"], row["AmpliconSequence"]))
+            if row.get("ErrorStatus", "OK") == "OK":
+                rows.append((row["Header"], row["AmpliconSequence"]))
     num_input = len(rows)
     if num_input == 0:
         return 0, 0, 0, {}, {}
@@ -51,16 +37,18 @@ def analyze_csv(file_path, muscle_exe=None):
         aligned_dict[header] = seq
 
     num_unique_asvs = len(asv_to_headers)
+
+    # Compute pairwise Hamming distances between unique ASV sequences.
+    # Amplicons are extracted from the PMPrimer MSA, so they are pre-aligned;
+    # length differences reflect indels at that locus and are treated as mismatches.
+    unique_seqs = list(asv_to_headers.keys())
     distances = []
-    aligned_list = list(asv_to_headers.keys())
-    for i in range(len(aligned_list)):
-        for j in range(i + 1, len(aligned_list)):
-            try:
-                d = hamming_distance(aligned_list[i], aligned_list[j])
-                distances.append(d)
-            except ValueError:
-                continue
+    for i in range(len(unique_seqs)):
+        for j in range(i + 1, len(unique_seqs)):
+            d = hamming_distance(unique_seqs[i], unique_seqs[j])
+            distances.append(d)
     median_hd = statistics.median(distances) if distances else 0
+
     return num_input, num_unique_asvs, median_hd, asv_to_headers, aligned_dict
 
 
@@ -73,12 +61,12 @@ def main(input_folder, output_summary_csv, muscle_exe=None):
     os.makedirs(aligned_folder, exist_ok=True)
     for csv_file in csv_files:
         basename = os.path.basename(csv_file)
-        num_input, num_unique_asvs, median_hd, asv_to_headers, aligned_dict = analyze_csv(csv_file, muscle_exe)
+        num_input, num_unique_asvs, median_hd, asv_to_headers, aligned_dict = analyze_csv(csv_file)
         if len(asv_to_headers) > max_asv_count:
             max_asv_count = len(asv_to_headers)
-        # Compute amplicon length from the first aligned sequence (assuming all are equal length)
+        # Compute amplicon length as the most common sequence length across all amplicons
         if aligned_dict:
-            amplicon_length = len(next(iter(aligned_dict.values())))
+            amplicon_length = statistics.mode(len(s) for s in aligned_dict.values())
         else:
             amplicon_length = 0
 
