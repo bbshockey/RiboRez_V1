@@ -50,7 +50,7 @@ def process_subfolder(folder_path):
     def update_counts_and_restructure(df, gene_name, folder_path, rep_to_mapped):
         # Get original sequence counts
         original_fasta = os.path.join(folder_path, f"{gene_name}.fasta")
-        filtered_fasta = os.path.join(folder_path, f"{gene_name}.filt.fasta")
+        filtered_fasta = os.path.join(folder_path, "pmprimer_outputs", f"{gene_name}.filt.fasta")
 
         # Count sequences and unique input genomes from original FASTA
         original_count = 0
