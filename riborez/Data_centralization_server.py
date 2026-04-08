@@ -9,7 +9,7 @@ def extract_best_row(parent_folder):
 
     for subdir, _, files in os.walk(parent_folder):
         for file in files:
-            if file.endswith("processed_amplicon.csv"):
+            if file.endswith("_amplicon_stats.csv"):
                 file_path = os.path.join(subdir, file)
                 try:
                     df = pd.read_csv(file_path, low_memory=False)

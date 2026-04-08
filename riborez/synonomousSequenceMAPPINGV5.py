@@ -208,10 +208,52 @@ def process_subfolder(folder_path):
 
     df = update_counts_and_restructure(df, gene_name, folder_path, rep_to_mapped)
 
-    # Save updated file
-    output_file = os.path.join(folder_path, f"{gene_name}_processed_amplicon.csv")
-    df.to_csv(output_file, index=False)
-    print(f"Processed {folder_path} -> {output_file}")
+    # --- Split into stats file and ASV mapping file ---
+
+    # Identify ASV columns (ASV_i, ASV_i_Sequence, ASV_i_Headers)
+    asv_col_pattern = re.compile(r'^ASV_\d+')
+    asv_cols = [c for c in df.columns if asv_col_pattern.match(c)]
+    stats_cols = [c for c in df.columns if not asv_col_pattern.match(c)]
+
+    # 1. Stats file: one row per primer pair, no ASV data
+    stats_df = df[stats_cols]
+    stats_file = os.path.join(folder_path, f"{gene_name}_amplicon_stats.csv")
+    stats_df.to_csv(stats_file, index=False)
+
+    # 2. ASV mapping file: long format — one row per ASV per primer pair
+    # Columns: PrimerPairCSV, ASV_Number, Sequence, GenomeHeaders
+    asv_rows = []
+    # Find max ASV index present
+    asv_indices = sorted(set(
+        int(re.match(r'^ASV_(\d+)', c).group(1))
+        for c in asv_cols
+    ))
+    for _, row in df.iterrows():
+        primer_csv = row['PrimerPairCSV']
+        for i in asv_indices:
+            seq_col = f"ASV_{i}_Sequence"
+            hdr_col = f"ASV_{i}_Headers"
+            if seq_col not in df.columns:
+                continue
+            seq = row.get(seq_col, '')
+            headers = row.get(hdr_col, '')
+            # Skip empty ASV slots (sparse rows with fewer ASVs than max)
+            if not isinstance(seq, str) or seq.strip() == '':
+                continue
+            asv_rows.append({
+                "PrimerPairCSV": primer_csv,
+                "ASV_Number": i,
+                "Sequence": seq,
+                "GenomeHeaders": headers if isinstance(headers, str) else ''
+            })
+
+    asv_df = pd.DataFrame(asv_rows, columns=["PrimerPairCSV", "ASV_Number", "Sequence", "GenomeHeaders"])
+    asv_file = os.path.join(folder_path, f"{gene_name}_asv_mapping.tsv")
+    asv_df.to_csv(asv_file, sep='\t', index=False)
+
+    print(f"Processed {folder_path}")
+    print(f"  -> {stats_file} ({len(stats_df)} primer pairs)")
+    print(f"  -> {asv_file} ({len(asv_df)} ASV entries)")
 
 def main(parent_folder):
     for subdir in os.listdir(parent_folder):
