@@ -1,6 +1,16 @@
 import os
 import sys
+import re
 import pandas as pd
+
+def extract_gcf_id(header):
+    """Extract GCF/GCA accession from a FASTA header string."""
+    if not isinstance(header, str):
+        return None
+    m = re.match(r'(GC[FA]_\d+\.\d+)', header)
+    if m:
+        return m.group(1)
+    return None
 
 def process_subfolder(folder_path):
     # Find mapping file
@@ -34,128 +44,160 @@ def process_subfolder(folder_path):
                     cell = cell.replace(rep, formatted)
         return cell
 
-
     df = df.map(replace_rep)
 
     # Update sequence counts and restructure columns
-    def update_counts_and_restructure(df, gene_name, folder_path):
+    def update_counts_and_restructure(df, gene_name, folder_path, rep_to_mapped):
         # Get original sequence counts
         original_fasta = os.path.join(folder_path, f"{gene_name}.fasta")
         filtered_fasta = os.path.join(folder_path, f"{gene_name}.filt.fasta")
-        
+
         # Count sequences in original FASTA
         original_count = 0
         if os.path.exists(original_fasta):
             with open(original_fasta, 'r') as f:
                 original_count = sum(1 for line in f if line.startswith('>'))
-        
+
         # Count sequences in filtered FASTA
         non_redundant_count = 0
         if os.path.exists(filtered_fasta):
             with open(filtered_fasta, 'r') as f:
                 non_redundant_count = sum(1 for line in f if line.startswith('>'))
-        
+
+        # Build expanded header set from rep_to_mapped:
+        # maps each representative header -> full set of original headers it represents
+        def expand_headers(rep_headers):
+            """Given an iterable of representative headers, return the full set of
+            original headers by expanding through rep_to_mapped."""
+            expanded = set()
+            for h in rep_headers:
+                if h in rep_to_mapped and rep_to_mapped[h] != h:
+                    for mapped_h in rep_to_mapped[h].split(';'):
+                        expanded.add(mapped_h.strip())
+                else:
+                    expanded.add(h)
+            return expanded
+
         # Count successful amplifications and bacteria metrics from amplicon CSV files
         successful_amplifications = []
-        bacteria_amplified_counts = []
-        unique_bacteria_counts = []
+        bacteria_amplified_undercounted = []
+        bacteria_amplified_corrected = []
+        unique_bacteria_undercounted = []
+        unique_bacteria_corrected = []
+
         for _, row in df.iterrows():
             primer_csv = row.get('PrimerPairCSV', '')
             if primer_csv:
-                # Look for the amplicon CSV file in the output directory
                 amplicon_csv = os.path.join(folder_path, "output", primer_csv)
                 if os.path.exists(amplicon_csv):
                     try:
-                        # Count only rows where both primers were found (ErrorStatus == "OK")
                         amplicon_df_pre = pd.read_csv(amplicon_csv)
                         if 'ErrorStatus' in amplicon_df_pre.columns:
                             amp_count = int((amplicon_df_pre['ErrorStatus'] == 'OK').sum())
+                            amplicon_df = amplicon_df_pre[amplicon_df_pre['ErrorStatus'] == 'OK']
                         else:
                             amp_count = max(0, len(amplicon_df_pre))
+                            amplicon_df = amplicon_df_pre
                         successful_amplifications.append(amp_count)
-                        
-                        # Count bacteria amplified and unique bacteria by parsing amplicon data
-                        bacteria_amplified = 0
-                        unique_bacteria = 0
+
+                        bact_under = 0
+                        bact_corr = 0
+                        uniq_under = 0
+                        uniq_corr = 0
+
                         try:
-                            amplicon_df = amplicon_df_pre[amplicon_df_pre.get('ErrorStatus', pd.Series(['OK'] * len(amplicon_df_pre))) == 'OK'] if 'ErrorStatus' in amplicon_df_pre.columns else amplicon_df_pre
                             if 'Header' in amplicon_df.columns and 'AmpliconSequence' in amplicon_df.columns:
-                                # Count bacteria amplified (original logic)
-                                gcf_identifiers = set()
+                                # --- Undercounted: use only representative headers ---
+                                rep_gcf_set = set()
                                 for header in amplicon_df['Header']:
-                                    if isinstance(header, str):
-                                        # Extract GCF identifier (e.g., GCF_000005845.2_EColi -> GCF_000005845.2)
-                                        if 'GCF_' in header:
-                                            gcf_part = header.split('|')[0]  # Get first part before |
-                                            if '_' in gcf_part:
-                                                gcf_id = gcf_part.split('_')[:-1]  # Remove strain name
-                                                gcf_id = '_'.join(gcf_id)
-                                                gcf_identifiers.add(gcf_id)
-                                bacteria_amplified = len(gcf_identifiers)
-                                
-                                # Count unique bacteria (sequences unique to one species only)
-                                sequence_to_gcf = {}  # Map sequence to set of GCF identifiers
-                                for idx, row_data in amplicon_df.iterrows():
-                                    if isinstance(row_data['AmpliconSequence'], str) and isinstance(row_data['Header'], str):
-                                        sequence = row_data['AmpliconSequence']
-                                        header = row_data['Header']
-                                        
-                                        # Extract GCF identifier
-                                        if 'GCF_' in header:
-                                            gcf_part = header.split('|')[0]  # Get first part before |
-                                            if '_' in gcf_part:
-                                                gcf_id = gcf_part.split('_')[:-1]  # Remove strain name
-                                                gcf_id = '_'.join(gcf_id)
-                                                
-                                                # Map sequence to GCF identifiers
-                                                if sequence not in sequence_to_gcf:
-                                                    sequence_to_gcf[sequence] = set()
-                                                sequence_to_gcf[sequence].add(gcf_id)
-                                
-                                # Count unique bacteria (sequences unique to one species)
-                                unique_gcf_identifiers = set()
-                                for sequence, gcf_set in sequence_to_gcf.items():
-                                    if len(gcf_set) == 1:  # Sequence is unique to one species
-                                        unique_gcf_identifiers.update(gcf_set)
-                                unique_bacteria = len(unique_gcf_identifiers)
+                                    gcf = extract_gcf_id(str(header) if isinstance(header, str) else '')
+                                    if gcf:
+                                        rep_gcf_set.add(gcf)
+                                bact_under = len(rep_gcf_set)
+
+                                # sequence -> set of GCF ids (representative only)
+                                rep_seq_to_gcf = {}
+                                for _, row_data in amplicon_df.iterrows():
+                                    seq = row_data['AmpliconSequence']
+                                    hdr = row_data['Header']
+                                    if isinstance(seq, str) and isinstance(hdr, str):
+                                        gcf = extract_gcf_id(hdr)
+                                        if gcf:
+                                            rep_seq_to_gcf.setdefault(seq, set()).add(gcf)
+                                uniq_under = sum(1 for gcf_set in rep_seq_to_gcf.values() if len(gcf_set) == 1)
+
+                                # --- Corrected: expand representative headers through rep_to_mapped ---
+                                # Build sequence -> expanded set of GCF ids
+                                corr_seq_to_gcf = {}
+                                for _, row_data in amplicon_df.iterrows():
+                                    seq = row_data['AmpliconSequence']
+                                    hdr = row_data['Header']
+                                    if isinstance(seq, str) and isinstance(hdr, str):
+                                        # expand this representative header
+                                        expanded = expand_headers([hdr])
+                                        for exp_hdr in expanded:
+                                            gcf = extract_gcf_id(exp_hdr)
+                                            if gcf:
+                                                corr_seq_to_gcf.setdefault(seq, set()).add(gcf)
+
+                                # All expanded GCF ids across all sequences = corrected BacteriaAmplified
+                                all_corr_gcf = set()
+                                for gcf_set in corr_seq_to_gcf.values():
+                                    all_corr_gcf.update(gcf_set)
+                                bact_corr = len(all_corr_gcf)
+
+                                # UniqueBacteria corrected: sequences unique to exactly one GCF
+                                uniq_corr_gcf = set()
+                                for gcf_set in corr_seq_to_gcf.values():
+                                    if len(gcf_set) == 1:
+                                        uniq_corr_gcf.update(gcf_set)
+                                uniq_corr = len(uniq_corr_gcf)
+
                         except Exception as e:
                             print(f"Warning: Could not parse bacteria metrics for {primer_csv}: {e}")
-                            bacteria_amplified = 0
-                            unique_bacteria = 0
-                        
-                        bacteria_amplified_counts.append(bacteria_amplified)
-                        unique_bacteria_counts.append(unique_bacteria)
-                    except:
+
+                        bacteria_amplified_undercounted.append(bact_under)
+                        bacteria_amplified_corrected.append(bact_corr)
+                        unique_bacteria_undercounted.append(uniq_under)
+                        unique_bacteria_corrected.append(uniq_corr)
+
+                    except Exception:
                         successful_amplifications.append(0)
-                        bacteria_amplified_counts.append(0)
-                        unique_bacteria_counts.append(0)
+                        bacteria_amplified_undercounted.append(0)
+                        bacteria_amplified_corrected.append(0)
+                        unique_bacteria_undercounted.append(0)
+                        unique_bacteria_corrected.append(0)
                 else:
                     successful_amplifications.append(0)
-                    bacteria_amplified_counts.append(0)
-                    unique_bacteria_counts.append(0)
+                    bacteria_amplified_undercounted.append(0)
+                    bacteria_amplified_corrected.append(0)
+                    unique_bacteria_undercounted.append(0)
+                    unique_bacteria_corrected.append(0)
             else:
                 successful_amplifications.append(0)
-                bacteria_amplified_counts.append(0)
-                unique_bacteria_counts.append(0)
-        
-        # Remove problematic columns
+                bacteria_amplified_undercounted.append(0)
+                bacteria_amplified_corrected.append(0)
+                unique_bacteria_undercounted.append(0)
+                unique_bacteria_corrected.append(0)
+
+        # Remove old columns if present
         columns_to_remove = ['NumInputSequences', 'NumberOfUniqueBacteria']
         for col in columns_to_remove:
             if col in df.columns:
                 df = df.drop(columns=[col])
-        
-        # Add new columns at the beginning (after PrimerPairCSV)
+
+        # Insert new columns after PrimerPairCSV (index 0)
         df.insert(1, 'Original#ofSequences', original_count)
         df.insert(2, 'nonRedundantOriginal#ofSequences', non_redundant_count)
         df.insert(3, 'SequencesSuccessfullyAmplified', successful_amplifications)
-        df.insert(4, 'BacteriaAmplified', bacteria_amplified_counts)
-        df.insert(5, 'UniqueBacteria', unique_bacteria_counts)
-        
+        df.insert(4, 'BacteriaAmplified(undercounted)', bacteria_amplified_undercounted)
+        df.insert(5, 'BacteriaAmplified', bacteria_amplified_corrected)
+        df.insert(6, 'UniqueBacteria(undercounted)', unique_bacteria_undercounted)
+        df.insert(7, 'UniqueBacteria', unique_bacteria_corrected)
+
         return df
 
-
-
-    df = update_counts_and_restructure(df, gene_name, folder_path)
+    df = update_counts_and_restructure(df, gene_name, folder_path, rep_to_mapped)
 
     # Save updated file
     output_file = os.path.join(folder_path, f"{gene_name}_processed_amplicon.csv")
@@ -171,7 +213,7 @@ def main(parent_folder):
 # Main runner
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python synonomousSequenceMAPPINGV4.py <parent_folder>")
+        print("Usage: python synonomousSequenceMAPPINGV5.py <parent_folder>")
         sys.exit(1)
 
     parent_folder = sys.argv[1]
