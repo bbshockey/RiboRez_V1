@@ -66,18 +66,19 @@ def process_subfolder(folder_path):
                 amplicon_csv = os.path.join(folder_path, "output", primer_csv)
                 if os.path.exists(amplicon_csv):
                     try:
-                        # Count rows in the CSV file (excluding header)
-                        with open(amplicon_csv, 'r') as f:
-                            # Count lines and subtract 1 for header
-                            line_count = sum(1 for line in f)
-                            amp_count = max(0, line_count - 1)  # Subtract header row
+                        # Count only rows where both primers were found (ErrorStatus == "OK")
+                        amplicon_df_pre = pd.read_csv(amplicon_csv)
+                        if 'ErrorStatus' in amplicon_df_pre.columns:
+                            amp_count = int((amplicon_df_pre['ErrorStatus'] == 'OK').sum())
+                        else:
+                            amp_count = max(0, len(amplicon_df_pre))
                         successful_amplifications.append(amp_count)
                         
                         # Count bacteria amplified and unique bacteria by parsing amplicon data
                         bacteria_amplified = 0
                         unique_bacteria = 0
                         try:
-                            amplicon_df = pd.read_csv(amplicon_csv)
+                            amplicon_df = amplicon_df_pre[amplicon_df_pre.get('ErrorStatus', pd.Series(['OK'] * len(amplicon_df_pre))) == 'OK'] if 'ErrorStatus' in amplicon_df_pre.columns else amplicon_df_pre
                             if 'Header' in amplicon_df.columns and 'AmpliconSequence' in amplicon_df.columns:
                                 # Count bacteria amplified (original logic)
                                 gcf_identifiers = set()
@@ -146,7 +147,7 @@ def process_subfolder(folder_path):
         # Add new columns at the beginning (after PrimerPairCSV)
         df.insert(1, 'Original#ofSequences', original_count)
         df.insert(2, 'nonRedundantOriginal#ofSequences', non_redundant_count)
-        df.insert(3, 'SuccessfulAmplifications', successful_amplifications)
+        df.insert(3, 'SequencesSuccessfullyAmplified', successful_amplifications)
         df.insert(4, 'BacteriaAmplified', bacteria_amplified_counts)
         df.insert(5, 'UniqueBacteria', unique_bacteria_counts)
         

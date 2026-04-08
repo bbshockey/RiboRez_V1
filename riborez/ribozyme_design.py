@@ -270,16 +270,16 @@ def _parse_amplicon_csv(path):
                 except (ValueError, TypeError):
                     record[col] = 0.0
             for col in ["Original#ofSequences", "nonRedundantOriginal#ofSequences",
-                        "SuccessfulAmplifications", "BacteriaAmplified", "UniqueBacteria"]:
+                        "SequencesSuccessfullyAmplified", "BacteriaAmplified", "UniqueBacteria"]:
                 try:
                     record[col] = int(float(row.get(col, "")))
                 except (ValueError, TypeError):
                     record[col] = None
-            if record.get("SuccessfulAmplifications") is None:
+            if record.get("SequencesSuccessfullyAmplified") is None:
                 try:
-                    record["SuccessfulAmplifications"] = int(float(row.get("NumInputSequences", "0")))
+                    record["SequencesSuccessfullyAmplified"] = int(float(row.get("NumInputSequences", "0")))
                 except (ValueError, TypeError):
-                    record["SuccessfulAmplifications"] = 0
+                    record["SequencesSuccessfullyAmplified"] = 0
             amplicons[amp_id] = record
     return amplicons
 
@@ -381,7 +381,7 @@ _AMPLICON_FIELDS = [
     "amplicon_id", "PrimerPairCSV",
     "NumUniqueASVs", "MedianHammingDistance", "AmpliconLength",
 ]
-_EXTENDED_FIELDS = ["SuccessfulAmplifications", "BacteriaAmplified", "UniqueBacteria"]
+_EXTENDED_FIELDS = ["SequencesSuccessfullyAmplified", "BacteriaAmplified", "UniqueBacteria"]
 _RIBO_OUT_FIELDS = [
     "fwd_primer", "rev_primer", "rev_region", "aln_pos",
     "igs", "T", "p1_ext", "p1_loop",
