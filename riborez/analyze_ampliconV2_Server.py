@@ -20,7 +20,9 @@ def analyze_csv(file_path):
         reader = csv.DictReader(f)
         for row in reader:
             if row.get("ErrorStatus", "OK") == "OK":
-                rows.append((row["Header"], row["AmpliconSequence"]))
+                seq = row["AmpliconSequence"].strip().upper()
+                if seq:
+                    rows.append((row["Header"], seq))
     num_input = len(rows)
     if num_input == 0:
         return 0, 0, 0, {}, {}
