@@ -72,26 +72,10 @@ def process_subfolder(folder_path):
             with open(filtered_fasta, 'r') as f:
                 non_redundant_count = sum(1 for line in f if line.startswith('>'))
 
-        # Build expanded header set from rep_to_mapped:
-        # maps each representative header -> full set of original headers it represents
-        def expand_headers(rep_headers):
-            """Given an iterable of representative headers, return the full set of
-            original headers by expanding through rep_to_mapped."""
-            expanded = set()
-            for h in rep_headers:
-                if h in rep_to_mapped and rep_to_mapped[h] != h:
-                    for mapped_h in rep_to_mapped[h].split(';'):
-                        expanded.add(mapped_h.strip())
-                else:
-                    expanded.add(h)
-            return expanded
-
         # Count successful amplifications and bacteria metrics from amplicon CSV files
         successful_amplifications = []
-        bacteria_amplified_undercounted = []
-        bacteria_amplified_corrected = []
-        unique_bacteria_undercounted = []
-        unique_bacteria_corrected = []
+        bacteria_amplified = []
+        unique_bacteria = []
 
         for _, row in df.iterrows():
             primer_csv = row.get('PrimerPairCSV', '')
@@ -108,85 +92,48 @@ def process_subfolder(folder_path):
                             amplicon_df = amplicon_df_pre
                         successful_amplifications.append(amp_count)
 
-                        bact_under = 0
-                        bact_corr = 0
-                        uniq_under = 0
-                        uniq_corr = 0
+                        bact = 0
+                        uniq = 0
 
                         try:
                             if 'Header' in amplicon_df.columns and 'AmpliconSequence' in amplicon_df.columns:
-                                # --- Undercounted: use only representative headers ---
-                                rep_gcf_set = set()
+                                # Count unique genomes (GCF IDs) across all successfully amplified sequences
+                                gcf_set = set()
                                 for header in amplicon_df['Header']:
                                     gcf = extract_gcf_id(str(header) if isinstance(header, str) else '')
                                     if gcf:
-                                        rep_gcf_set.add(gcf)
-                                bact_under = len(rep_gcf_set)
+                                        gcf_set.add(gcf)
+                                bact = len(gcf_set)
 
-                                # sequence -> set of GCF ids (representative only)
-                                rep_seq_to_gcf = {}
+                                # UniqueBacteria: genomes whose amplicon sequence is unique to that genome
+                                seq_to_gcf = {}
                                 for _, row_data in amplicon_df.iterrows():
                                     seq = row_data['AmpliconSequence']
                                     hdr = row_data['Header']
                                     if isinstance(seq, str) and isinstance(hdr, str):
                                         gcf = extract_gcf_id(hdr)
                                         if gcf:
-                                            rep_seq_to_gcf.setdefault(seq, set()).add(gcf)
-                                uniq_under = sum(1 for gcf_set in rep_seq_to_gcf.values() if len(gcf_set) == 1)
-
-                                # --- Corrected: expand representative headers through rep_to_mapped ---
-                                # Build sequence -> expanded set of GCF ids
-                                corr_seq_to_gcf = {}
-                                for _, row_data in amplicon_df.iterrows():
-                                    seq = row_data['AmpliconSequence']
-                                    hdr = row_data['Header']
-                                    if isinstance(seq, str) and isinstance(hdr, str):
-                                        # expand this representative header
-                                        expanded = expand_headers([hdr])
-                                        for exp_hdr in expanded:
-                                            gcf = extract_gcf_id(exp_hdr)
-                                            if gcf:
-                                                corr_seq_to_gcf.setdefault(seq, set()).add(gcf)
-
-                                # All expanded GCF ids across all sequences = corrected BacteriaAmplified
-                                all_corr_gcf = set()
-                                for gcf_set in corr_seq_to_gcf.values():
-                                    all_corr_gcf.update(gcf_set)
-                                bact_corr = len(all_corr_gcf)
-
-                                # UniqueBacteria corrected: sequences unique to exactly one GCF
-                                uniq_corr_gcf = set()
-                                for gcf_set in corr_seq_to_gcf.values():
-                                    if len(gcf_set) == 1:
-                                        uniq_corr_gcf.update(gcf_set)
-                                uniq_corr = len(uniq_corr_gcf)
+                                            seq_to_gcf.setdefault(seq, set()).add(gcf)
+                                uniq = sum(1 for gcf_s in seq_to_gcf.values() if len(gcf_s) == 1)
 
                         except Exception as e:
                             print(f"Warning: Could not parse bacteria metrics for {primer_csv}: {e}")
 
-                        bacteria_amplified_undercounted.append(bact_under)
-                        bacteria_amplified_corrected.append(bact_corr)
-                        unique_bacteria_undercounted.append(uniq_under)
-                        unique_bacteria_corrected.append(uniq_corr)
+                        bacteria_amplified.append(bact)
+                        unique_bacteria.append(uniq)
 
                     except Exception:
                         successful_amplifications.append(0)
-                        bacteria_amplified_undercounted.append(0)
-                        bacteria_amplified_corrected.append(0)
-                        unique_bacteria_undercounted.append(0)
-                        unique_bacteria_corrected.append(0)
+                        bacteria_amplified.append(0)
+                        unique_bacteria.append(0)
                 else:
                     successful_amplifications.append(0)
-                    bacteria_amplified_undercounted.append(0)
-                    bacteria_amplified_corrected.append(0)
-                    unique_bacteria_undercounted.append(0)
-                    unique_bacteria_corrected.append(0)
+                    bacteria_amplified.append(0)
+                    unique_bacteria.append(0)
             else:
                 successful_amplifications.append(0)
-                bacteria_amplified_undercounted.append(0)
-                bacteria_amplified_corrected.append(0)
-                unique_bacteria_undercounted.append(0)
-                unique_bacteria_corrected.append(0)
+                bacteria_amplified.append(0)
+                unique_bacteria.append(0)
 
         # Remove old columns if present
         columns_to_remove = ['NumInputSequences', 'NumberOfUniqueBacteria']
@@ -199,10 +146,8 @@ def process_subfolder(folder_path):
         df.insert(2, 'Original#ofSequences', original_count)
         df.insert(3, 'nonRedundantOriginal#ofSequences', non_redundant_count)
         df.insert(4, 'SequencesSuccessfullyAmplified', successful_amplifications)
-        df.insert(5, 'BacteriaAmplified(undercounted)', bacteria_amplified_undercounted)
-        df.insert(6, 'BacteriaAmplified', bacteria_amplified_corrected)
-        df.insert(7, 'UniqueBacteria(undercounted)', unique_bacteria_undercounted)
-        df.insert(8, 'UniqueBacteria', unique_bacteria_corrected)
+        df.insert(5, 'BacteriaAmplified', bacteria_amplified)
+        df.insert(6, 'UniqueBacteria', unique_bacteria)
 
         return df
 

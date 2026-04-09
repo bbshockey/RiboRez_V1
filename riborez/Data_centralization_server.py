@@ -30,9 +30,7 @@ def extract_best_row(parent_folder):
                         has_new_columns = all(col in df.columns for col in ["Original#ofSequences", "nonRedundantOriginal#ofSequences", "SequencesSuccessfullyAmplified"])
                         has_input_genomes = "InputGenomes" in df.columns
                         has_bacteria_amplified = "BacteriaAmplified" in df.columns
-                        has_bacteria_amplified_under = "BacteriaAmplified(undercounted)" in df.columns
                         has_unique_bacteria = "UniqueBacteria" in df.columns
-                        has_unique_bacteria_under = "UniqueBacteria(undercounted)" in df.columns
                         has_old_columns = all(col in df.columns for col in ["NumInputSequences", "NumberOfUniqueBacteria"])
                         if has_new_columns:
                             output_row = {
@@ -42,9 +40,7 @@ def extract_best_row(parent_folder):
                                 "Original#ofSequences": best_row.get("Original#ofSequences", 0),
                                 "nonRedundantOriginal#ofSequences": best_row.get("nonRedundantOriginal#ofSequences", 0),
                                 "SequencesSuccessfullyAmplified": best_row.get("SequencesSuccessfullyAmplified", 0),
-                                "BacteriaAmplified(undercounted)": best_row.get("BacteriaAmplified(undercounted)", 0) if has_bacteria_amplified_under else 0,
                                 "BacteriaAmplified": best_row.get("BacteriaAmplified", 0) if has_bacteria_amplified else 0,
-                                "UniqueBacteria(undercounted)": best_row.get("UniqueBacteria(undercounted)", 0) if has_unique_bacteria_under else 0,
                                 "UniqueBacteria": best_row.get("UniqueBacteria", 0) if has_unique_bacteria else 0,
                                 "NumUniqueASVs": best_row.get("NumUniqueASVs", 0),
                                 "MedianHammingDistance": best_row.get("MedianHammingDistance", 0),
@@ -59,9 +55,7 @@ def extract_best_row(parent_folder):
                                 "Original#ofSequences": best_row.get("NumInputSequences", 0),
                                 "nonRedundantOriginal#ofSequences": 0,
                                 "SequencesSuccessfullyAmplified": 0,
-                                "BacteriaAmplified(undercounted)": 0,
                                 "BacteriaAmplified": 0,
-                                "UniqueBacteria(undercounted)": 0,
                                 "UniqueBacteria": 0,
                                 "NumUniqueASVs": best_row.get("NumUniqueASVs", 0),
                                 "MedianHammingDistance": best_row.get("MedianHammingDistance", 0),
@@ -76,9 +70,7 @@ def extract_best_row(parent_folder):
                                 "Original#ofSequences": 0,
                                 "nonRedundantOriginal#ofSequences": 0,
                                 "SequencesSuccessfullyAmplified": 0,
-                                "BacteriaAmplified(undercounted)": 0,
                                 "BacteriaAmplified": 0,
-                                "UniqueBacteria(undercounted)": 0,
                                 "UniqueBacteria": 0,
                                 "NumUniqueASVs": best_row.get("NumUniqueASVs", 0),
                                 "MedianHammingDistance": best_row.get("MedianHammingDistance", 0),
