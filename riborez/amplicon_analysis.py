@@ -95,8 +95,17 @@ def run_amplification_analysis(input_dir, log_file):
         # Run amplicon analysis
         summary_csv = os.path.join(input_dir, "amplicon.summary.csv")
         from .analyze_ampliconV2_Server import main as analyze_main
-        analyze_main(output_folder, summary_csv)
-        
+        result = analyze_main(output_folder, summary_csv)
+        if result:
+            hd_min = min(result["nonzero_medians"], default=0)
+            hd_max = max(result["nonzero_medians"], default=0)
+            log_message(
+                f"Hamming summary for {os.path.basename(input_dir)}: "
+                f"{result['multi_asv']}/{result['total']} CSVs had >=2 unique ASVs; "
+                f"Hamming range {hd_min:.0f}-{hd_max:.0f}",
+                log_file
+            )
+
         return True
         
     except Exception as e:

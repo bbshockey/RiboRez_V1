@@ -61,9 +61,33 @@ def main(input_folder, output_summary_csv, muscle_exe=None):
     # Create folder for aligned FASTA files.
     aligned_folder = os.path.join(os.path.dirname(output_summary_csv), "aligned_amplicons")
     os.makedirs(aligned_folder, exist_ok=True)
+
+    # Diagnostic counters
+    n_zero_ok = 0
+    n_single_asv = 0
+    n_multi_asv = 0
+    nonzero_medians = []
+    debug_shown = 0
+
     for csv_file in csv_files:
         basename = os.path.basename(csv_file)
         num_input, num_unique_asvs, median_hd, asv_to_headers, aligned_dict = analyze_csv(csv_file)
+
+        # Track diagnostics
+        if num_input == 0:
+            n_zero_ok += 1
+        elif num_unique_asvs == 1:
+            n_single_asv += 1
+            if debug_shown < 5:
+                sample_seq = next(iter(asv_to_headers.keys()))
+                print(f"  [DEBUG] {basename}: {num_input} OK rows collapsed to 1 unique ASV")
+                print(f"    sample seq: {sample_seq[:60]}")
+                debug_shown += 1
+        else:
+            n_multi_asv += 1
+            if median_hd > 0:
+                nonzero_medians.append(median_hd)
+
         if len(asv_to_headers) > max_asv_count:
             max_asv_count = len(asv_to_headers)
         # Compute amplicon length as the most common sequence length across all amplicons
@@ -90,6 +114,22 @@ def main(input_folder, output_summary_csv, muscle_exe=None):
         with open(aligned_fasta_path, "w") as fout:
             for seq_id, seq in aligned_dict.items():
                 fout.write(f">{seq_id}\n{seq}\n")
+
+    # Print diagnostic summary
+    total = len(csv_files)
+    overall_median = statistics.median(nonzero_medians) if nonzero_medians else 0
+    hd_min = min(nonzero_medians) if nonzero_medians else 0
+    hd_max = max(nonzero_medians) if nonzero_medians else 0
+    print(f"[Amplicon Analysis] {os.path.basename(input_folder)}: processed {total} CSVs")
+    print(f"  {n_zero_ok} had 0 successful amplifications (ErrorStatus != OK for all rows)")
+    print(f"  {n_single_asv} had 1 unique ASV (Hamming = 0, sequences genuinely identical)")
+    print(f"  {n_multi_asv} had >=2 unique ASVs (Hamming calculated)")
+    if n_multi_asv == 0:
+        print(f"  [WARNING] No primer pairs had >=2 unique ASVs -- all Hamming distances are 0.")
+        print(f"  This likely means amplicon.summary.csv is stale. Re-run riborez amplicon-analysis.")
+    else:
+        print(f"  Hamming distance range: {hd_min:.0f}-{hd_max:.0f}, median-of-medians: {overall_median:.1f}")
+
     # Build header columns for the summary CSV.
     fixed_columns = ["PrimerPairCSV", "NumInputSequences", "NumUniqueASVs", "MedianHammingDistance", "AmpliconLength"]
     asv_columns = []
@@ -101,6 +141,14 @@ def main(input_folder, output_summary_csv, muscle_exe=None):
         writer.writeheader()
         for row in summary_data:
             writer.writerow(row)
+
+    return {
+        "total": total,
+        "zero_ok": n_zero_ok,
+        "single_asv": n_single_asv,
+        "multi_asv": n_multi_asv,
+        "nonzero_medians": nonzero_medians
+    }
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
