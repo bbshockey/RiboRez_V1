@@ -7,6 +7,10 @@ def extract_best_row(parent_folder):
     folder_basename = os.path.basename(os.path.normpath(parent_folder))
     output_csv_path = os.path.join(parent_folder, f"{folder_basename}_best_amplicon_summary.csv")
 
+    # Dedicated output folder for per-gene best-primer ASV tables
+    best_asvs_dir = os.path.join(parent_folder, "best_asvs")
+    os.makedirs(best_asvs_dir, exist_ok=True)
+
     for subdir, _, files in os.walk(parent_folder):
         for file in files:
             if file.endswith("_amplicon_stats.csv"):
@@ -77,6 +81,23 @@ def extract_best_row(parent_folder):
                                 "AmpliconLength": best_row.get("AmpliconLength", 0)
                             }
                         output_rows.append(output_row)
+
+                        # ── Export best-primer ASV mapping ────────────────────
+                        gene_name = file.replace("_amplicon_stats.csv", "")
+                        asv_map_path = os.path.join(subdir, f"{gene_name}_asv_mapping.tsv")
+                        best_primer_csv = best_row.get("PrimerPairCSV", "")
+                        if best_primer_csv and os.path.exists(asv_map_path):
+                            try:
+                                asv_df = pd.read_csv(asv_map_path, sep="\t")
+                                best_asvs = asv_df[asv_df["PrimerPairCSV"] == best_primer_csv]
+                                out_tsv = os.path.join(best_asvs_dir,
+                                                        f"{gene_name}_best_asvs.tsv")
+                                best_asvs.to_csv(out_tsv, sep="\t", index=False)
+                                print(f"  → {gene_name}_best_asvs.tsv "
+                                      f"({len(best_asvs)} ASVs, primer: {best_primer_csv})")
+                            except Exception as e2:
+                                print(f"  [WARN] Could not write {gene_name}_best_asvs.tsv: {e2}")
+
                 except Exception as e:
                     print(f"Failed to process {file_path}: {e}")
 
