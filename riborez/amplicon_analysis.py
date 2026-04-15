@@ -125,14 +125,14 @@ def run_sequence_mapping(input_dir, log_file):
         log_message(f"Error in sequence mapping for {input_dir}: {e}", log_file)
         return False
 
-def run_data_centralization(parent_folder, log_file):
+def run_data_centralization(parent_folder, output_dir, log_file):
     """
     Run data centralization for the entire project.
-    This corresponds to Data_centralization_server.py functionality.
+    Writes best_amplicon_summary.csv and best_asvs/ directly into output_dir.
     """
     try:
         from .Data_centralization_server import extract_best_row
-        extract_best_row(parent_folder)
+        extract_best_row(parent_folder, output_dir=output_dir)
         return True
     except Exception as e:
         log_message(f"Error in data centralization: {e}", log_file)
@@ -231,23 +231,13 @@ def analyze_amplicons(input_folder, output_folder=None, threads=8):
     
     log_message(f"Sequence mapping complete: {successful_mapping} successful, {failed_mapping} failed", log_file)
     
-    # Step 3: Run data centralization
+    # Step 3: Run data centralization — outputs go directly to output_folder
     print("[INFO] Step 3: Running data centralization...")
-    if run_data_centralization(str(input_folder), log_file):
+    if run_data_centralization(str(input_folder), str(output_folder), log_file):
         log_message("Data centralization completed successfully", log_file)
+        log_message(f"Summary and best_asvs/ written to {output_folder}", log_file)
     else:
         log_message("Data centralization failed", log_file)
-    
-    # Copy results to output folder
-    try:
-        # Copy the centralized summary
-        centralized_file = input_folder / f"{input_folder.name}_best_amplicon_summary.csv"
-        if centralized_file.exists():
-            import shutil
-            shutil.copy2(centralized_file, output_folder / centralized_file.name)
-            log_message(f"Copied centralized summary to {output_folder}", log_file)
-    except Exception as e:
-        log_message(f"Error copying results: {e}", log_file)
     
     # Print summary
     print(f"[SUCCESS] Amplicon analysis completed!")

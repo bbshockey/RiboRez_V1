@@ -2,13 +2,22 @@ import os
 import sys
 import pandas as pd
 
-def extract_best_row(parent_folder):
+def extract_best_row(parent_folder, output_dir=None):
+    """
+    Args:
+        parent_folder: root folder containing per-gene subdirectories
+        output_dir:    where to write outputs (summary CSV + best_asvs/).
+                       Defaults to parent_folder when None (standalone use).
+    """
+    if output_dir is None:
+        output_dir = parent_folder
+
     output_rows = []
     folder_basename = os.path.basename(os.path.normpath(parent_folder))
-    output_csv_path = os.path.join(parent_folder, f"{folder_basename}_best_amplicon_summary.csv")
+    output_csv_path = os.path.join(output_dir, f"{folder_basename}_best_amplicon_summary.csv")
 
     # Dedicated output folder for per-gene best-primer ASV tables
-    best_asvs_dir = os.path.join(parent_folder, "best_asvs")
+    best_asvs_dir = os.path.join(output_dir, "best_asvs")
     os.makedirs(best_asvs_dir, exist_ok=True)
 
     for subdir, _, files in os.walk(parent_folder):
@@ -108,14 +117,15 @@ def extract_best_row(parent_folder):
     else:
         print("No valid rows found in any subdirectories.")
 
-def main(parent_folder):
-    extract_best_row(parent_folder)
+def main(parent_folder, output_dir=None):
+    extract_best_row(parent_folder, output_dir=output_dir)
 
 # Main runner
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python Data_centralization.py <parent_folder>")
+    if len(sys.argv) not in (2, 3):
+        print("Usage: python Data_centralization.py <parent_folder> [output_dir]")
         sys.exit(1)
 
     parent_folder = sys.argv[1]
-    main(parent_folder)
+    output_dir    = sys.argv[2] if len(sys.argv) == 3 else None
+    main(parent_folder, output_dir=output_dir)
