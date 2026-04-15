@@ -175,8 +175,10 @@ def analyze_amplicons(input_folder, output_folder=None, threads=8):
     print(f"[INFO] Output directory: {output_folder}")
     print(f"[INFO] Threads: {threads}")
     
-    # Find gene directories (skip reference_mappings)
-    gene_dirs = [d for d in input_folder.iterdir() if d.is_dir() and d.name != "reference_mappings"]
+    # Find gene directories — skip known non-gene subdirectories
+    SKIP_DIRS = {"reference_mappings", "best_asvs", "output", "__pycache__"}
+    gene_dirs = [d for d in input_folder.iterdir()
+                 if d.is_dir() and d.name not in SKIP_DIRS]
     
     if not gene_dirs:
         raise ValueError(f"No gene directories found in {input_folder}")
