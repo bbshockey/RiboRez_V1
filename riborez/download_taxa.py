@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import subprocess
@@ -87,15 +88,20 @@ def download_taxa(taxon_name, taxon_id, output_dir, rehydrate, force, dry_run, m
             with open(accessions_file, 'w') as f:
                 subprocess.run(summary_cmd, stdout=f, check=True)
 
-            # Convert full JSON-lines report to TSV and extract accession column
-            dataformat_cmd = ["dataformat", "tsv", "genome", "--fields", "accession"]
-            with open(accessions_file, 'r') as infile, open(accessions_clean_file, 'w') as outfile:
-                subprocess.run(dataformat_cmd, stdin=infile, stdout=outfile, check=True)
-
-            # Remove header line produced by dataformat
-            with open(accessions_clean_file, 'r') as f:
-                lines = f.readlines()
-            accession_lines = [l for l in lines[1:] if l.strip()]
+            # Extract accession IDs directly from JSON-lines (avoids dataformat version issues)
+            accession_lines = []
+            with open(accessions_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        acc = obj.get('accession')
+                        if acc:
+                            accession_lines.append(acc + '\n')
+                    except json.JSONDecodeError:
+                        pass
             with open(accessions_clean_file, 'w') as f:
                 f.writelines(accession_lines)
 
@@ -209,12 +215,19 @@ def download_taxa_multi(taxon_name, taxon_ids, output_dir, rehydrate, force, dry
             if not dry_run:
                 with open(accessions_file, 'w') as f:
                     subprocess.run(summary_cmd, stdout=f, check=True)
-                dataformat_cmd = ["dataformat", "tsv", "genome", "--fields", "accession"]
-                with open(accessions_file, 'r') as infile, open(accessions_clean_file, 'w') as outfile:
-                    subprocess.run(dataformat_cmd, stdin=infile, stdout=outfile, check=True)
-                with open(accessions_clean_file, 'r') as f:
-                    lines = f.readlines()
-                accession_lines = [l for l in lines[1:] if l.strip()]
+                accession_lines = []
+                with open(accessions_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            obj = json.loads(line)
+                            acc = obj.get('accession')
+                            if acc:
+                                accession_lines.append(acc + '\n')
+                        except json.JSONDecodeError:
+                            pass
                 with open(accessions_clean_file, 'w') as f:
                     f.writelines(accession_lines)
 
