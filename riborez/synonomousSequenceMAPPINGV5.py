@@ -4,12 +4,15 @@ import re
 import pandas as pd
 
 def extract_gcf_id(header):
-    """Extract GCF/GCA accession from a FASTA header string."""
+    """Extract GCF/GCA accession or genome identifier from a FASTA header string."""
     if not isinstance(header, str):
         return None
     m = re.match(r'(GC[FA]_\d+\.\d+)', header)
     if m:
         return m.group(1)
+    first_field = header.split('|')[0].strip()
+    if first_field:
+        return first_field
     return None
 
 def process_subfolder(folder_path):
