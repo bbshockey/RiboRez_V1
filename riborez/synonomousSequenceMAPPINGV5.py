@@ -108,7 +108,8 @@ def process_subfolder(folder_path):
                                         gcf_set.add(gcf)
                                 bact = len(gcf_set)
 
-                                # UniqueBacteria: genomes whose amplicon sequence is unique to that genome
+                                # UniqueBacteria: count of genomes that have at least one
+                                # amplicon sequence unique to that genome
                                 seq_to_gcf = {}
                                 for _, row_data in amplicon_df.iterrows():
                                     seq = row_data['AmpliconSequence']
@@ -117,7 +118,11 @@ def process_subfolder(folder_path):
                                         gcf = extract_gcf_id(hdr)
                                         if gcf:
                                             seq_to_gcf.setdefault(seq, set()).add(gcf)
-                                uniq = sum(1 for gcf_s in seq_to_gcf.values() if len(gcf_s) == 1)
+                                genomes_with_unique = set()
+                                for gcf_set in seq_to_gcf.values():
+                                    if len(gcf_set) == 1:
+                                        genomes_with_unique.update(gcf_set)
+                                uniq = len(genomes_with_unique)
 
                         except Exception as e:
                             print(f"Warning: Could not parse bacteria metrics for {primer_csv}: {e}")
